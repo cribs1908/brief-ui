@@ -226,7 +226,7 @@ export async function POST(req: Request) {
 		
 		// 1. Verificare che il run sia completato e abbia risultati
 		const { data: runData, error: runError } = await supa
-			.from('runs_new')
+			.from('runs')
 			.select('status')
 			.eq('id', runId)
 			.maybeSingle();
@@ -241,8 +241,8 @@ export async function POST(req: Request) {
 		
 		// 2. Recuperare la tabella di risultati
 		const { data: resultData, error: resultError } = await supa
-			.from('results_new')
-			.select('table_json, source_map_path')
+			.from('results')
+			.select('columns, rows')
 			.eq('run_id', runId)
 			.maybeSingle();
 		
@@ -250,36 +250,24 @@ export async function POST(req: Request) {
 			return NextResponse.json({ error: 'Results not found' }, { status: 404 });
 		}
 		
-		// 3. Recuperare source map se disponibile
-		let sourceMapData = null;
-		if (resultData.source_map_path) {
-			try {
-				const { data: sourceMapUrl } = await supa.storage
-					.from(STORAGE_BUCKET)
-					.createSignedUrl(resultData.source_map_path, 3600);
-				
-				if (sourceMapUrl?.signedUrl) {
-					const sourceMapResponse = await fetch(sourceMapUrl.signedUrl);
-					sourceMapData = await sourceMapResponse.json();
-				}
-			} catch (sourceMapError) {
-				console.warn('⚠️ Failed to load source map:', sourceMapError);
-			}
-		}
+		// 3. Build table structure from columns and rows
+		const tableData = {
+			columns: resultData.columns || [],
+			rows: resultData.rows || []
+		};
 		
 		// 4. Salvare il messaggio dell'utente
-		await supa.from('messages_new').insert({
+		await supa.from('messages').insert({
 			run_id: runId,
 			role: 'user',
 			content: message
 		});
 		
 		// 5. Detect domain from table data and prepare context
-		const tableContext = JSON.stringify(resultData.table_json, null, 2);
-		const sourceContext = sourceMapData ? JSON.stringify(sourceMapData, null, 2) : 'No source map available';
+		const tableContext = JSON.stringify(tableData, null, 2);
 		
 		// Detect domain from table structure
-		const domain = detectDomainFromTable(resultData.table_json);
+		const domain = detectDomainFromTable(tableData);
 		const domainProfile = getDomainProfile(domain);
 		
 		// 6. Chiamare OpenAI per la risposta con domain-specific intelligence
@@ -322,7 +310,7 @@ ${getResponseTemplate(domain)}
 		const reply = completion.choices[0]?.message?.content || 'Sorry, I could not generate a response.';
 		
 		// 7. Salvare la risposta dell'assistente
-		await supa.from('messages_new').insert({
+		await supa.from('messages').insert({
 			run_id: runId,
 			role: 'assistant',
 			content: reply
@@ -347,7 +335,7 @@ export async function GET(req: Request) {
 		const supa = getSupabaseAdmin();
 		
 		const { data, error } = await supa
-			.from('messages_new')
+			.from('messages')
 			.select('*')
 			.eq('run_id', runId)
 			.order('created_at', { ascending: true });
