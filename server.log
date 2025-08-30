@@ -1,0 +1,25 @@
+
+> brief-ui@0.1.0 dev
+> next dev --turbopack
+
+   ▲ Next.js 15.5.2 (Turbopack)
+   - Local:        http://localhost:3000
+   - Network:      http://192.168.1.27:3000
+   - Environments: .env.local
+
+ ✓ Starting...
+ ✓ Compiled middleware in 177ms
+ ✓ Ready in 1005ms
+ ○ Compiling / ...
+ ✓ Compiled / in 2.2s
+ GET / 200 in 2470ms
+ POST / 200 in 143ms
+ ✓ Compiled /api/chat/create in 277ms
+❌ Failed to create run: {
+  code: '22P02',
+  details: null,
+  hint: null,
+  message: 'invalid input syntax for type uuid: "ws-demo"'
+}
+ POST /api/chat/create 503 in 891ms
+ ✓ Compiled in 117ms
