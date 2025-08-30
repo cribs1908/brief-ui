@@ -227,7 +227,7 @@ async function processFilesInline(runId: string, files: any[], prompt: string, d
 					normalized: normalizedData
 				});
 				
-				console.log(`✅ Extraction completed for ${doc.filename}: ${extraction.fields?.length || 0} fields`);
+				console.log(`✅ Extraction completed for ${doc.filename}: ${extraction.length} fields`);
 				
 			} catch (error: any) {
 				console.error(`❌ Extraction failed for ${doc.filename}:`, error);
@@ -238,7 +238,20 @@ async function processFilesInline(runId: string, files: any[], prompt: string, d
 		// Step 3: Build Comparison Results
 		console.log(`📊 Building comparison table...`);
 		
-		const comparisonResult = await buildComparisonTable(extractions, domain);
+		// Prepare normalized extractions for comparison builder
+		const normalizedExtractions = extractions.map(ext => ext.normalized).flat();
+		const documents = processedDocs.map(doc => ({
+			id: doc.id,
+			filename: doc.filename
+		}));
+		
+		const comparisonResult = await buildComparisonTable(
+			runId, 
+			'default-workspace', // workspace ID placeholder
+			domain, 
+			normalizedExtractions, 
+			documents
+		);
 		
 		// Save final results
 		const { error: resultError } = await supa
@@ -246,11 +259,15 @@ async function processFilesInline(runId: string, files: any[], prompt: string, d
 			.insert({
 				run_id: runId,
 				domain_type: domain,
-				comparison_table: comparisonResult.table,
+				comparison_table: {
+					columns: comparisonResult.columns,
+					rows: comparisonResult.rows,
+					highlights: comparisonResult.highlights
+				},
 				insights: comparisonResult.insights,
 				metadata: {
 					totalDocuments: files.length,
-					totalFields: comparisonResult.table?.headers?.length || 0,
+					totalFields: comparisonResult.columns?.length || 0,
 					processingTime: Date.now()
 				}
 			});
