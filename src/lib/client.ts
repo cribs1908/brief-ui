@@ -57,3 +57,9 @@ export async function apiChatHistory(runId: string) {
 	if (!res.ok) throw new Error(await res.text());
 	return res.json();
 }
+
+export async function apiGetUserFiles() {
+	const res = await fetch('/api/files');
+	if (!res.ok) throw new Error(await res.text());
+	return res.json();
+}

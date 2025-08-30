@@ -4,6 +4,7 @@ import Image from "next/image";
 import { Paperclip, Star, ArrowUp, ChatText, FileText, MagnifyingGlass, GearSix, DotsThreeOutlineVertical, DownloadSimple, Lightning, Sparkle, Asterisk, FunnelSimple, ChatsCircle, CurrencyDollar, UserPlus, Timer, ClockAfternoon, ShieldCheck, ChartLineUp, TrendUp, CaretDown, FilePdf, X, ArrowRight, SlidersHorizontal, Archive, User, Buildings, Palette, Bell, CreditCard, TrashSimple, Moon, SunDim, Shield, LockSimple } from "@phosphor-icons/react";
 import { apiCreateRun, uploadSigned, apiSubmit, listenEvents, apiResult, apiChatQnA, apiChatHistory } from "@/lib/client";
 import { UserButton, SignInButton, SignUpButton, SignedIn, SignedOut } from "@clerk/nextjs";
+import FilesList from "@/components/FilesList";
 
 // Detect domain based on prompt and file names
 function detectDomain(prompt: string, files: File[]): string {
@@ -567,6 +568,22 @@ function MainApp() {
   const [loading, setLoading] = useState<"idle"|"extracting"|"normalizing"|"building"|"done">("idle");
   const [activeTab, setActiveTab] = useState<'chat'|'files'|'archive'|'results'|'settings'>('chat');
   const [lastCompletedRunId, setLastCompletedRunId] = useState<string | null>(null);
+  const [selectedFilesFromList, setSelectedFilesFromList] = useState<{filename: string, fileId: string}[]>([]);
+  
+  // Handle adding file from Files tab to chat
+  const handleAddFileToChat = (filename: string, fileId: string) => {
+    console.log(`📎 Adding file to chat: ${filename} (${fileId})`);
+    
+    // Switch to chat tab
+    setActiveTab('chat');
+    
+    // Add to selected files (prevent duplicates)
+    setSelectedFilesFromList(prev => {
+      const exists = prev.find(f => f.fileId === fileId);
+      if (exists) return prev;
+      return [...prev, { filename, fileId }];
+    });
+  };
   
   // Gestione completa della pipeline dall'app principale
   const handleSubmit = async (prompt: string, files: File[]) => {
@@ -647,27 +664,7 @@ function MainApp() {
               </div>
             )
           ) : activeTab==='files' ? (
-            <div className="max-w-[1000px] mx-auto w-full h-full">
-              {/* Files mock list */}
-              <div className="panel rounded-[14px] card-shadow h-full flex flex-col">
-                <div className="p-4 flex items-center justify-between">
-                  <div className="flex items-center gap-2 text-[#d9d9d9]"><FileText size={18} /> <span className="font-mono-ui">Your files</span></div>
-                  <div />
-                </div>
-                <div className="flex-1 overflow-y-auto p-4 space-y-2">
-                  {new Array(7).fill(0).map((_,i)=> (
-                    <div key={i} className="rounded-[12px] panel p-3 flex items-center gap-3">
-                      <FilePdf size={18} />
-                      <div className="flex-1">
-                        <div className="text-[#d9d9d9] font-mono-ui">{`SaaS_Spec_${i+1}.pdf`}</div>
-                        <div className="text-[#9a9a9a] text-xs">{`${(2.1+i*0.3).toFixed(1)} MB`} • {`2025-08-${(10+i).toString().padStart(2,'0')}`}</div>
-                      </div>
-                      <button className="h-8 w-8 rounded-full bg-[#0f0f0f] border border-[#2a2a2a] flex items-center justify-center"><span className="text-[#d9d9d9] text-base">+</span></button>
-                    </div>
-                  ))}
-                </div>
-              </div>
-            </div>
+            <FilesList onAddFileToChat={handleAddFileToChat} />
           ) : activeTab==='archive' ? (
             <div className="max-w-[1100px] mx-auto w-full h-full">
               {/* Archive mock list */}
