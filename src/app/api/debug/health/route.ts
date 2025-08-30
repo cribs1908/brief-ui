@@ -24,13 +24,8 @@ export async function GET() {
     results.storage = { ok: false, message: e.message };
   }
 
-  // OCR service
-  try {
-    const res = await fetch(`${ENV.ocrApiUrl}/health`, { cache: 'no-store' });
-    results.ocr = { ok: res.ok };
-  } catch (e: any) {
-    results.ocr = { ok: false, message: e.message };
-  }
+  // OCR service (disabled for production)
+  results.ocr = { ok: true, message: 'OCR service not configured for production' };
 
   // OpenAI
   try {

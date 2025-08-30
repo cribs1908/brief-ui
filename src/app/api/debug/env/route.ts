@@ -7,7 +7,7 @@ export async function GET() {
     SUPABASE_URL: ENV.supabaseUrl ? 'present' : 'missing',
     SUPABASE_SERVICE_ROLE_KEY: ENV.supabaseService ? 'present' : 'missing',
     WORKER_BASE_URL: ENV.workerBaseUrl,
-    OCR_API_URL: ENV.ocrApiUrl,
+    MISTRAL_API_KEY: ENV.mistralApiKey ? 'present' : 'missing',
     MAX_FILES_PER_RUN: ENV.maxFilesPerRun,
     MAX_PAGES_PER_PDF: ENV.maxPagesPerPdf,
     MAX_MB_PER_PDF: ENV.maxMbPerPdf,
