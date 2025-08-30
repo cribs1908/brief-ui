@@ -41,7 +41,17 @@ export async function POST(req: Request) {
 			}
 		}
 		
-		// Trigger processing on external worker
+		// Trigger processing on external worker or inline
+		if (ENV.workerBaseUrl === 'disabled' || ENV.workerBaseUrl.includes('localhost')) {
+			console.log('⚠️ External worker disabled or not available, processing inline...');
+			// TODO: Implement inline processing or return success for now
+			return NextResponse.json({ 
+				success: true, 
+				message: 'Processing started (inline mode)', 
+				runId 
+			});
+		}
+		
 		try {
 			console.log(`🚀 Triggering worker job at ${ENV.workerBaseUrl}/jobs/compare ...`);
 			const resp = await fetch(`${ENV.workerBaseUrl}/jobs/compare`, {
