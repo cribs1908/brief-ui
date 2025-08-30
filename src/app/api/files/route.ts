@@ -19,7 +19,7 @@ export async function GET(request: NextRequest) {
     const { data: workspace } = await supabase
       .from('workspaces')
       .select('id')
-      .eq('owner_id', userId)
+      .eq('clerk_user_id', userId)
       .single();
 
     if (!workspace) {

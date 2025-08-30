@@ -22,7 +22,7 @@ export async function POST(req: Request) {
 		let { data: workspace } = await supa
 			.from('workspaces')
 			.select('id')
-			.eq('owner_id', userId)
+			.eq('clerk_user_id', userId)
 			.single();
 		
 		if (!workspace) {
@@ -32,7 +32,7 @@ export async function POST(req: Request) {
 				.from('workspaces')
 				.insert({
 					id: workspaceUuid,
-					owner_id: userId,
+					clerk_user_id: userId,
 					name: 'Default Workspace',
 					created_at: new Date().toISOString()
 				});
