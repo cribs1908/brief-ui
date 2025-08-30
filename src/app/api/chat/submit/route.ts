@@ -258,17 +258,17 @@ async function processFilesInline(runId: string, files: any[], prompt: string, d
 			.from('results_new')
 			.insert({
 				run_id: runId,
-				domain_type: domain,
-				comparison_table: {
+				table_json: {
 					columns: comparisonResult.columns,
 					rows: comparisonResult.rows,
-					highlights: comparisonResult.highlights
-				},
-				insights: comparisonResult.insights,
-				metadata: {
-					totalDocuments: files.length,
-					totalFields: comparisonResult.columns?.length || 0,
-					processingTime: Date.now()
+					highlights: comparisonResult.highlights,
+					insights: comparisonResult.insights,
+					exports: comparisonResult.exports,
+					metadata: {
+						totalDocuments: files.length,
+						totalFields: comparisonResult.columns?.length || 0,
+						processingTime: Date.now()
+					}
 				}
 			});
 		
