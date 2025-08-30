@@ -19,7 +19,7 @@ export const ENV = {
 	mistralApiKey: process.env.MISTRAL_API_KEY,
 	
 	// Worker esterno per processing
-	workerBaseUrl: process.env.WORKER_BASE_URL || 'http://localhost:3005',
+	workerBaseUrl: process.env.WORKER_BASE_URL || 'http://localhost:3001',
 	
 	// Clerk (invariato)
 	clerkPublishableKey: process.env.NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY,
