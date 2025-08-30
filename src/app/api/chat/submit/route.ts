@@ -105,7 +105,7 @@ async function processFilesInline(runId: string, files: any[], prompt: string, d
 	
 	// Update run status to processing
 	await supa.from('runs_new').update({ 
-		status: 'processing',
+		status: 'PROCESSING',
 		started_at: new Date().toISOString()
 	}).eq('id', runId);
 	
@@ -276,7 +276,7 @@ async function processFilesInline(runId: string, files: any[], prompt: string, d
 		
 		// Update run status to completed
 		await supa.from('runs_new').update({ 
-			status: 'completed',
+			status: 'READY',
 			completed_at: new Date().toISOString(),
 			has_results: true
 		}).eq('id', runId);
@@ -288,7 +288,7 @@ async function processFilesInline(runId: string, files: any[], prompt: string, d
 		
 		// Update run status to failed
 		await supa.from('runs_new').update({ 
-			status: 'failed',
+			status: 'ERROR',
 			completed_at: new Date().toISOString(),
 			error_message: error.message
 		}).eq('id', runId);
