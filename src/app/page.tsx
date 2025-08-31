@@ -735,8 +735,8 @@ function ArchiveTab({ archivedComparisons, onOpenComparison, onRenameComparison 
         </div>
         <div className="flex-1 overflow-y-auto p-4 grid gap-3 grid-cols-1 md:grid-cols-2">
           {archivedComparisons.map((comparison) => (
-            <div key={comparison.runId} className="rounded-[12px] panel p-4 hover:bg-[#1b1b1b] transition-colors">
-              <div className="flex items-center gap-2 mb-2">
+            <div key={comparison.runId} className="rounded-[12px] panel p-3 hover:bg-[#1b1b1b] transition-colors">
+              <div className="flex items-center gap-2 mb-1">
                 <Image src="/logo1pdf.png" alt="logo" width={16} height={16} />
                 {editingId === comparison.runId ? (
                   <div className="flex-1 flex items-center gap-2">
@@ -938,8 +938,14 @@ function MainApp() {
                 setActiveTab('results');
               }}
               onRenameComparison={(runId, newName) => {
-                // TODO: Implementare rename API
-                console.log('Rename comparison:', runId, newName);
+                setArchivedComparisons(prev => 
+                  prev.map(comp => 
+                    comp.runId === runId 
+                      ? { ...comp, title: newName }
+                      : comp
+                  )
+                );
+                console.log('Renamed comparison:', runId, newName);
               }}
             />
           ) : activeTab==='results' ? (
