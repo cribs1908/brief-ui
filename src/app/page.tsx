@@ -292,7 +292,10 @@ function Results({ runId }: { runId?: string }) {
 
   async function handleMiniSend() {
     const text = miniInput.trim();
-    if (!text || !runId || runId.trim() === '' || miniStage === 'thinking') return;
+    if (!text || !runId || runId.trim() === '' || miniStage === 'thinking') {
+      console.log('Cannot send message: missing runId or empty text');
+      return;
+    }
     
     const userMsg = { id: Date.now(), role: 'user' as const, content: text };
     const thinkingMsg = { id: Date.now()+1, role: 'ai' as const, content: 'Thinking…', thinking: true };
@@ -366,10 +369,15 @@ function Results({ runId }: { runId?: string }) {
                 }} className="btn-icon h-10 w-10 rounded-full flex items-center justify-center"><X size={20} color="#5F5F5F" /></button>
               </div>
               <div className="flex-1 p-4 text-[#9a9a9a] font-mono-ui overflow-y-auto space-y-3">
-                {miniMessages.length === 0 && (
+                {!runId || runId.trim() === '' ? (
+                  <div className="opacity-60 text-center py-8">
+                    <div className="text-[#d9d9d9] mb-2">No comparison data available</div>
+                    <div className="text-sm">Complete a comparison first to use AI chat</div>
+                  </div>
+                ) : miniMessages.length === 0 ? (
                   <div className="opacity-60">Type a question to the assistant…</div>
-                )}
-                {miniMessages.map(m => (
+                ) : null}
+                {runId && runId.trim() !== '' && miniMessages.map(m => (
                   <div key={m.id} className={`flex items-start gap-3 ${m.role==='user' ? 'justify-end' : 'justify-start'}`}>
                     {m.role==='ai' && (
                       <div className={`h-8 w-8 rounded-full bg-[#0d0d0d] border border-[#2a2a2a] flex items-center justify-center ${m.thinking ? 'spin-logo' : ''}`}>
@@ -386,8 +394,19 @@ function Results({ runId }: { runId?: string }) {
               <div className="p-4">
                 <div className="rounded-[12px] panel p-3 flex items-center gap-2">
                   <Image src="/logo1pdf.png" alt="logo" width={14} height={14} />
-                  <input value={miniInput} onChange={e=>setMiniInput(e.target.value)} onKeyDown={e=>{ if(e.key==='Enter'){ e.preventDefault(); handleMiniSend(); } }} className="flex-1 bg-transparent outline-none font-mono-ui" placeholder="Ask a question about the comparison…" />
-                  <button onClick={handleMiniSend} className="btn-send h-12 w-12 rounded-full flex items-center justify-center">
+                  <input 
+                    value={miniInput} 
+                    onChange={e=>setMiniInput(e.target.value)} 
+                    onKeyDown={e=>{ if(e.key==='Enter'){ e.preventDefault(); handleMiniSend(); } }} 
+                    disabled={!runId || runId.trim() === ''}
+                    className={`flex-1 bg-transparent outline-none font-mono-ui ${!runId || runId.trim() === '' ? 'opacity-50 cursor-not-allowed' : ''}`}
+                    placeholder={!runId || runId.trim() === '' ? "Complete a comparison to enable chat" : "Ask a question about the comparison…"}
+                  />
+                  <button 
+                    onClick={handleMiniSend} 
+                    disabled={!runId || runId.trim() === ''}
+                    className={`btn-send h-12 w-12 rounded-full flex items-center justify-center ${!runId || runId.trim() === '' ? 'opacity-50 cursor-not-allowed' : ''}`}
+                  >
                     <ArrowUp size={22} color="#5F5F5F" />
                   </button>
                 </div>
