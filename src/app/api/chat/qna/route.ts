@@ -241,7 +241,7 @@ export async function POST(req: Request) {
 		
 		// 2. Recuperare la tabella di risultati
 		const { data: resultData, error: resultError } = await supa
-			.from('results')
+			.from('results_new')
 			.select('columns, rows')
 			.eq('run_id', runId)
 			.maybeSingle();

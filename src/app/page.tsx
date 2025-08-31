@@ -198,18 +198,24 @@ function ChatCard({ onSubmit, stage, setStage, onDone }: { onSubmit: (prompt: st
 type Row = { icon: string; label: string; a?: string; b?: string; ok?: boolean; isCategory?: boolean };
 
 function getComparisonTitle(tableData: any): string {
-  console.log('🏷️ TableData for title:', tableData); // Debug log
+  console.log('🏷️ TableData FULL STRUCTURE:', JSON.stringify(tableData, null, 2)); // Full debug
+  console.log('🏷️ TableData keys:', Object.keys(tableData || {})); // Show all keys
+  console.log('🏷️ Direct domain check:', tableData?.domain); // Direct domain
+  console.log('🏷️ Table domain check:', tableData?.table?.domain); // Table nested domain
+  console.log('🏷️ Run domain check:', tableData?.run?.domain); // Run nested domain
   
-  if (!tableData?.domain) {
-    console.log('🏷️ No domain found, checking run data...');
-    // Try to get domain from run data or other sources
+  // Try multiple locations for domain
+  const domain = tableData?.domain || tableData?.table?.domain || tableData?.run?.domain || tableData?.metadata?.domain;
+  
+  if (!domain) {
+    console.log('🏷️ No domain found in any location');
     return "Comparison";
   }
   
-  const domain = tableData.domain.toUpperCase();
-  console.log('🏷️ Domain found:', domain);
+  const domainUpper = domain.toUpperCase();
+  console.log('🏷️ Domain found:', domainUpper);
   
-  switch (domain) {
+  switch (domainUpper) {
     case 'CHIP':
       return "CHIP Comparison";
     case 'SAAS':
@@ -217,7 +223,7 @@ function getComparisonTitle(tableData: any): string {
     case 'API':
       return "API Comparison";
     default:
-      return `${domain} Comparison`;
+      return `${domainUpper} Comparison`;
   }
 }
 
