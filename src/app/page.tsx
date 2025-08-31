@@ -204,7 +204,7 @@ function Results({ runId }: { runId?: string }) {
   // Fetch real results when component mounts
   useEffect(() => {
     async function fetchResults() {
-      if (!runId) {
+      if (!runId || runId.trim() === '') {
         setLoading(false);
         return;
       }
@@ -270,7 +270,7 @@ function Results({ runId }: { runId?: string }) {
   // Load chat history when chat opens
   useEffect(() => {
     async function loadChatHistory() {
-      if (!miniChatOpen || !runId || miniMessages.length > 0) return;
+      if (!miniChatOpen || !runId || runId.trim() === '' || miniMessages.length > 0) return;
       
       try {
         const history = await apiChatHistory(runId);
@@ -292,7 +292,7 @@ function Results({ runId }: { runId?: string }) {
 
   async function handleMiniSend() {
     const text = miniInput.trim();
-    if (!text || !runId || miniStage === 'thinking') return;
+    if (!text || !runId || runId.trim() === '' || miniStage === 'thinking') return;
     
     const userMsg = { id: Date.now(), role: 'user' as const, content: text };
     const thinkingMsg = { id: Date.now()+1, role: 'ai' as const, content: 'Thinking…', thinking: true };
@@ -568,6 +568,29 @@ function MainApp() {
   const [loading, setLoading] = useState<"idle"|"extracting"|"normalizing"|"building"|"done">("idle");
   const [activeTab, setActiveTab] = useState<'chat'|'files'|'archive'|'results'|'settings'>('chat');
   const [lastCompletedRunId, setLastCompletedRunId] = useState<string | null>(null);
+  
+  // Load last completed run on mount
+  useEffect(() => {
+    async function loadLastRun() {
+      if (lastCompletedRunId) return; // Already have one
+      
+      try {
+        // Try to get the most recent completed run for this user
+        const response = await fetch('/api/chat/latest-run');
+        if (response.ok) {
+          const data = await response.json();
+          if (data.runId) {
+            setLastCompletedRunId(data.runId);
+            console.log(`📋 Loaded last completed run: ${data.runId}`);
+          }
+        }
+      } catch (error) {
+        console.log('No previous runs found or error loading:', error);
+      }
+    }
+    
+    loadLastRun();
+  }, [lastCompletedRunId]);
   const [selectedFilesFromList, setSelectedFilesFromList] = useState<{filename: string, fileId: string}[]>([]);
   
   // Handle adding file from Files tab to chat

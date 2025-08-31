@@ -219,7 +219,7 @@ export async function POST(req: Request) {
 		const body = await req.json();
 		const { runId, message } = body;
 		
-		if (!runId) return NextResponse.json({ error: 'runId required' }, { status: 400 });
+		if (!runId || runId.trim() === '') return NextResponse.json({ error: 'runId required' }, { status: 400 });
 		if (!message) return NextResponse.json({ error: 'message required' }, { status: 400 });
 		
 		const supa = getSupabaseAdmin();
@@ -330,7 +330,7 @@ export async function GET(req: Request) {
 		const { searchParams } = new URL(req.url);
 		const runId = searchParams.get('runId');
 		
-		if (!runId) return NextResponse.json({ error: 'runId required' }, { status: 400 });
+		if (!runId || runId.trim() === '') return NextResponse.json({ error: 'runId required' }, { status: 400 });
 		
 		const supa = getSupabaseAdmin();
 		
