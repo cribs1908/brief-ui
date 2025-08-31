@@ -1,0 +1,4 @@
+DEPLOYMENT_TRIGGER=2025-01-01_openrtb_ultra_specific_prompts
+VERSION=v1.9
+WORKER_ENHANCED=true
+OPENRTB_TARGETING=active
