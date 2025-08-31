@@ -1,7 +1,7 @@
 "use client";
 import { useMemo, useState, useEffect, useRef } from "react";
 import Image from "next/image";
-import { Paperclip, Star, ArrowUp, ChatText, FileText, MagnifyingGlass, GearSix, DotsThreeOutlineVertical, DownloadSimple, Lightning, Sparkle, Asterisk, FunnelSimple, ChatsCircle, CurrencyDollar, UserPlus, Timer, ClockAfternoon, ShieldCheck, ChartLineUp, TrendUp, CaretDown, FilePdf, X, ArrowRight, Archive, User, Buildings, Palette, Bell, CreditCard, TrashSimple, Moon, SunDim, Shield, LockSimple } from "@phosphor-icons/react";
+import { Paperclip, Star, ArrowUp, ChatText, FileText, MagnifyingGlass, GearSix, DotsThreeOutlineVertical, DownloadSimple, Sparkle, Asterisk, FunnelSimple, ChatsCircle, CaretDown, FilePdf, X, ArrowRight, Archive, User, Buildings, Palette, Bell, CreditCard, TrashSimple, Moon, SunDim, Shield, LockSimple } from "@phosphor-icons/react";
 import { apiCreateRun, uploadSigned, apiSubmit, listenEvents, apiResult, apiChatQnA, apiChatHistory } from "@/lib/client";
 import { UserButton, SignInButton, SignUpButton, SignedIn, SignedOut } from "@clerk/nextjs";
 import FilesList from "@/components/FilesList";
@@ -195,21 +195,29 @@ function ChatCard({ onSubmit, stage, setStage, onDone }: { onSubmit: (prompt: st
   );
 }
 
-type Row = { icon: string; label: string; a?: string; b?: string; ok?: boolean };
+type Row = { icon: string; label: string; a?: string; b?: string; ok?: boolean; isCategory?: boolean };
 
 function getComparisonTitle(tableData: any): string {
-  if (!tableData?.domain) return "Comparison";
+  console.log('🏷️ TableData for title:', tableData); // Debug log
+  
+  if (!tableData?.domain) {
+    console.log('🏷️ No domain found, checking run data...');
+    // Try to get domain from run data or other sources
+    return "Comparison";
+  }
   
   const domain = tableData.domain.toUpperCase();
+  console.log('🏷️ Domain found:', domain);
+  
   switch (domain) {
     case 'CHIP':
-      return "Chip Comparison";
+      return "CHIP Comparison";
     case 'SAAS':
-      return "SaaS Comparison";
+      return "SAAS Comparison";
     case 'API':
       return "API Comparison";
     default:
-      return "Comparison";
+      return `${domain} Comparison`;
   }
 }
 
@@ -257,12 +265,22 @@ function Results({ runId }: { runId?: string }) {
       const value1 = row[1] || '';
       const value2 = row[2] || '';
       
+      // Clean up field name - remove "FIELD GROUP:" prefix and improve formatting
+      const cleanLabel = fieldName
+        .replace(/^FIELD GROUP:\s*/i, '') // Remove "FIELD GROUP:" prefix
+        .replace(/_/g, ' ')
+        .toUpperCase();
+      
+      // Check if this is a category separator (no values, just a group header)
+      const isCategory = !value1 && !value2 && fieldName.includes(':');
+      
       return {
         icon: "pricing", // Default icon, could be made dynamic  
-        label: fieldName.replace(/_/g, ' ').toUpperCase(),
+        label: cleanLabel,
         a: value1,
         b: value2, // Always show value2, even if same as value1
-        ok: value1 !== 'Processing failed' && value1 !== 'Processing...'
+        ok: value1 !== 'Processing failed' && value1 !== 'Processing...',
+        isCategory: isCategory
       };
     });
   }, [tableData]);
@@ -441,14 +459,7 @@ function Results({ runId }: { runId?: string }) {
         <div className="grid grid-cols-[260px_1fr_1fr] gap-6 h-full overflow-y-auto pr-2">
           {rows.map((r)=> (
             <div key={r.label} className="contents">
-              <div className="flex items-center gap-3 text-[#9a9a9a] font-mono">
-                {r.icon === "pricing" && <CurrencyDollar size={18} />}
-                {r.icon === "onboarding" && <UserPlus size={18} />}
-                {r.icon === "latency" && <Timer size={18} />}
-                {r.icon === "sla" && <ClockAfternoon size={18} />}
-                {r.icon === "security" && <ShieldCheck size={18} />}
-                {r.icon === "nps" && <ChartLineUp size={18} />}
-                {r.icon === "ltv" && <TrendUp size={18} />}
+              <div className={`flex items-center font-mono ${r.isCategory ? 'text-white/90 font-medium' : 'text-[#9a9a9a]'}`}>
                 <span>{r.label}</span>
               </div>
               <div className="text-[#d9d9d9]">{r.a ?? ""}</div>
