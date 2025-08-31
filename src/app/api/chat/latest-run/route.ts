@@ -24,7 +24,7 @@ export async function GET(request: NextRequest) {
 
     // Get the most recent completed run with results
     const { data: latestRun, error } = await supa
-      .from('runs')
+      .from('runs_new')
       .select(`
         id,
         status,

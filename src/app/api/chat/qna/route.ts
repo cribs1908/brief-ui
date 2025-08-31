@@ -226,7 +226,7 @@ export async function POST(req: Request) {
 		
 		// 1. Verificare che il run sia completato e abbia risultati
 		const { data: runData, error: runError } = await supa
-			.from('runs')
+			.from('runs_new')
 			.select('status')
 			.eq('id', runId)
 			.maybeSingle();

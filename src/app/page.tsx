@@ -1,7 +1,7 @@
 "use client";
 import { useMemo, useState, useEffect, useRef } from "react";
 import Image from "next/image";
-import { Paperclip, Star, ArrowUp, ChatText, FileText, MagnifyingGlass, GearSix, DotsThreeOutlineVertical, DownloadSimple, Lightning, Sparkle, Asterisk, FunnelSimple, ChatsCircle, CurrencyDollar, UserPlus, Timer, ClockAfternoon, ShieldCheck, ChartLineUp, TrendUp, CaretDown, FilePdf, X, ArrowRight, SlidersHorizontal, Archive, User, Buildings, Palette, Bell, CreditCard, TrashSimple, Moon, SunDim, Shield, LockSimple } from "@phosphor-icons/react";
+import { Paperclip, Star, ArrowUp, ChatText, FileText, MagnifyingGlass, GearSix, DotsThreeOutlineVertical, DownloadSimple, Lightning, Sparkle, Asterisk, FunnelSimple, ChatsCircle, CurrencyDollar, UserPlus, Timer, ClockAfternoon, ShieldCheck, ChartLineUp, TrendUp, CaretDown, FilePdf, X, ArrowRight, Archive, User, Buildings, Palette, Bell, CreditCard, TrashSimple, Moon, SunDim, Shield, LockSimple } from "@phosphor-icons/react";
 import { apiCreateRun, uploadSigned, apiSubmit, listenEvents, apiResult, apiChatQnA, apiChatHistory } from "@/lib/client";
 import { UserButton, SignInButton, SignUpButton, SignedIn, SignedOut } from "@clerk/nextjs";
 import FilesList from "@/components/FilesList";
@@ -197,6 +197,22 @@ function ChatCard({ onSubmit, stage, setStage, onDone }: { onSubmit: (prompt: st
 
 type Row = { icon: string; label: string; a?: string; b?: string; ok?: boolean };
 
+function getComparisonTitle(tableData: any): string {
+  if (!tableData?.domain) return "Comparison";
+  
+  const domain = tableData.domain.toUpperCase();
+  switch (domain) {
+    case 'CHIP':
+      return "Chip Comparison";
+    case 'SAAS':
+      return "SaaS Comparison";
+    case 'API':
+      return "API Comparison";
+    default:
+      return "Comparison";
+  }
+}
+
 function Results({ runId }: { runId?: string }) {
   const [tableData, setTableData] = useState<any>(null);
   const [loading, setLoading] = useState(true);
@@ -336,13 +352,9 @@ function Results({ runId }: { runId?: string }) {
       <div className="flex items-center gap-3 mb-3">
         <div className="pill-dark px-3 py-1 flex items-center gap-2">
           <Image src="/logo1pdf.png" alt="logo" width={16} height={16} />
-          <span className="font-mono-ui text-[#d9d9d9]">SAAS comparison</span>
+          <span className="font-mono-ui text-[#d9d9d9]">{getComparisonTitle(tableData)}</span>
         </div>
         <div className="ml-auto flex items-center gap-2">
-          <button className="pill px-2.5 py-1.5 flex items-center gap-2 bg-[#e6e6e6] text-black border border-[#cfcfcf]">
-            <SlidersHorizontal size={16} />
-            <span className="font-mono-ui text-sm">Filter</span>
-          </button>
           <ExportCSV className="bg-[#e6e6e6] border border-[#cfcfcf] px-2.5 py-1.5" tableData={tableData} />
         </div>
       </div>
@@ -414,22 +426,19 @@ function Results({ runId }: { runId?: string }) {
             </div>
           </div>
         )}
-        <div className="grid grid-cols-[260px_1fr_1fr_60px] items-center mb-6">
+        <div className="grid grid-cols-[260px_1fr_1fr] items-center mb-6">
           <div className="justify-self-start">
             <div className="pill-dark text-[#d9d9d9] px-3 py-1 flex items-center gap-2"><GearSix size={14} /><span className="font-mono-ui">SPEC</span></div>
           </div>
           <div className="justify-self-start">
-            <div className="pill-dark text-[#d9d9d9] px-3 py-1 flex items-center gap-2"><DotsThreeOutlineVertical size={14} weight="bold" /><span className="font-mono-ui">{colLabels[1]}</span><span className="dot-green ml-1"/></div>
+            <div className="pill-dark text-[#d9d9d9] px-3 py-1 flex items-center gap-2"><DotsThreeOutlineVertical size={14} weight="bold" /><span className="font-mono-ui">{colLabels[1]}</span></div>
           </div>
           <div className="justify-self-start">
-            <div className="pill-dark text-[#d9d9d9] px-3 py-1 flex items-center gap-2"><DotsThreeOutlineVertical size={14} weight="bold" /><span className="font-mono-ui">{colLabels[2]}</span><span className="w-3 h-3 rounded-full bg-red-600"/></div>
-          </div>
-          <div className="justify-self-end">
-            <div className="pill-dark px-3 py-1 flex items-center gap-2"><Lightning size={14} /><span className="font-mono-ui">AI</span></div>
+            <div className="pill-dark text-[#d9d9d9] px-3 py-1 flex items-center gap-2"><DotsThreeOutlineVertical size={14} weight="bold" /><span className="font-mono-ui">{colLabels[2]}</span></div>
           </div>
         </div>
 
-        <div className="grid grid-cols-[260px_1fr_1fr_60px] gap-6 h-full overflow-y-auto pr-2">
+        <div className="grid grid-cols-[260px_1fr_1fr] gap-6 h-full overflow-y-auto pr-2">
           {rows.map((r)=> (
             <div key={r.label} className="contents">
               <div className="flex items-center gap-3 text-[#9a9a9a] font-mono">
@@ -444,7 +453,6 @@ function Results({ runId }: { runId?: string }) {
               </div>
               <div className="text-[#d9d9d9]">{r.a ?? ""}</div>
               <div className="text-[#d9d9d9]">{r.b ?? ""}</div>
-              <div className="flex items-center justify-center">{r.ok ? <span className="dot-green"/> : <span className="w-3 h-3 rounded-full bg-[#2a2a2a]"/>}</div>
             </div>
           ))}
         </div>

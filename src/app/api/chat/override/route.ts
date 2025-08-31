@@ -11,7 +11,7 @@ export async function POST(req: Request) {
 		const supa = getSupabaseAdmin();
 		
 		// Get run info for workspace
-		const { data: runData } = await supa.from('runs').select('workspace_id').eq('id', runId).maybeSingle();
+		const { data: runData } = await supa.from('runs_new').select('workspace_id').eq('id', runId).maybeSingle();
 		if (!runData) return NextResponse.json({ error: 'Run not found' }, { status: 404 });
 		
 		// Save override
