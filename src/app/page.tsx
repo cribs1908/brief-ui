@@ -704,10 +704,8 @@ function MainApp() {
     setLoading('extracting');
     
     try {
-      const workspaceId = '00000000-0000-0000-0000-000000000001'; // Demo workspace UUID
-      
-      // 1. Create run
-      const create = await apiCreateRun(files.length || 1, workspaceId);
+      // 1. Create run (API will use authenticated user's workspace)
+      const create = await apiCreateRun(files.length || 1);
       const { runId, uploadUrls } = create;
       console.log(`📋 Created run: ${runId}`);
       
@@ -723,7 +721,7 @@ function MainApp() {
       const detectedDomain = detectDomain(prompt, files);
       console.log(`🎯 Detected domain: ${detectedDomain}`);
       const filesForSubmit = uploadUrls.map((u: any, i: number) => ({ ...u, filename: files[i]?.name || `document-${i+1}.pdf` }));
-      await apiSubmit({ runId, workspaceId, prompt, files: filesForSubmit, useOcr: true, domain: detectedDomain });
+      await apiSubmit({ runId, prompt, files: filesForSubmit, useOcr: true, domain: detectedDomain });
       
       // 4. Wait a moment for database to be consistent
       console.log(`⏳ Waiting for database consistency...`);

@@ -1,7 +1,8 @@
 import { createClient } from '@supabase/supabase-js';
 
-export async function apiCreateRun(filesCount: number, workspaceId: string) {
-	const res = await fetch('/api/chat/create', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ workspaceId, files: filesCount }) });
+export async function apiCreateRun(filesCount: number, workspaceId?: string) {
+	const body = workspaceId ? { workspaceId, files: filesCount } : { files: filesCount };
+	const res = await fetch('/api/chat/create', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) });
 	if (!res.ok) throw new Error(await res.text());
 	return res.json();
 }
