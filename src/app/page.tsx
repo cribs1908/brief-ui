@@ -340,7 +340,7 @@ function Results({ runId }: { runId?: string }) {
             <SlidersHorizontal size={16} />
             <span className="font-mono-ui text-sm">Filter</span>
           </button>
-          <ExportCSV className="bg-[#e6e6e6] border border-[#cfcfcf] px-2.5 py-1.5" />
+          <ExportCSV className="bg-[#e6e6e6] border border-[#cfcfcf] px-2.5 py-1.5" tableData={tableData} />
         </div>
       </div>
 
@@ -447,12 +447,82 @@ function Results({ runId }: { runId?: string }) {
   );
 }
 
-function ExportCSV({ className = "" }: { className?: string }) {
-  const csv = "spec,saas1,saas2\nPRICING,19.5$,\nONBOARDING,12 MONTHS,25 MONTHS";
+function ExportCSV({ className = "", tableData }: { className?: string, tableData?: any }) {
+  // Generate CSV from real table data
+  const csv = useMemo(() => {
+    if (!tableData?.table?.columns || !tableData?.table?.rows) {
+      return "Field,Product A,Product B\nNo data available,,";
+    }
+
+    const { columns, rows } = tableData.table;
+    
+    // Create header row
+    const header = columns.join(',');
+    
+    // Create data rows, escaping commas and quotes
+    const dataRows = rows.map((row: string[]) => {
+      return row.map((cell: string) => {
+        // Handle cells with commas or quotes by wrapping in quotes
+        if (typeof cell === 'string' && (cell.includes(',') || cell.includes('"') || cell.includes('\n'))) {
+          return `"${cell.replace(/"/g, '""')}"`;
+        }
+        return cell || '';
+      }).join(',');
+    }).join('\n');
+    
+    return `${header}\n${dataRows}`;
+  }, [tableData]);
+
+  // Generate dynamic filename
+  const filename = useMemo(() => {
+    if (!tableData?.table?.columns) return "comparison.csv";
+    
+    const columns = tableData.table.columns;
+    if (columns.length >= 3) {
+      // Use product names from columns (skip first column which is usually "Field" or "Specification")
+      const productNames = columns.slice(1)
+        .map((name: string) => name.replace(/[^a-zA-Z0-9_-]/g, '_')) // Clean filename
+        .join('_vs_');
+      return `${productNames}_comparison.csv`;
+    }
+    
+    return "comparison.csv";
+  }, [tableData]);
+
+  const hasData = tableData?.table?.columns && tableData?.table?.rows && tableData.table.rows.length > 0;
+
   const blob = typeof window !== "undefined" ? new Blob([csv], { type: "text/csv;charset=utf-8;" }) : null;
   const url = blob ? URL.createObjectURL(blob) : undefined;
+  
+  const handleDownload = () => {
+    if (!hasData || !url) return;
+    
+    // Clean up URL after download
+    setTimeout(() => {
+      if (url) URL.revokeObjectURL(url);
+    }, 100);
+  };
+  
+  if (!hasData) {
+    return (
+      <button 
+        disabled
+        className={`pill px-3 py-1 flex items-center gap-2 opacity-50 cursor-not-allowed ${className}`}
+        title="No data available to export"
+      >
+        <DownloadSimple size={16} />
+        <span className="font-mono-ui text-sm">Export in CSV</span>
+      </button>
+    );
+  }
+  
   return (
-    <a href={url} download="comparison.csv" className={`pill px-3 py-1 flex items-center gap-2 ${className}`}>
+    <a 
+      href={url} 
+      download={filename} 
+      onClick={handleDownload}
+      className={`pill px-3 py-1 flex items-center gap-2 ${className}`}
+    >
       <DownloadSimple size={16} />
       <span className="font-mono-ui text-sm">Export in CSV</span>
     </a>
