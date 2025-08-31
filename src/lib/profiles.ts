@@ -131,33 +131,130 @@ export const DOMAIN_PROFILES: Record<string, DomainProfile> = {
 	},
 
 	'API': {
-		id: 'api-v1',
+		id: 'api-v2',
 		domain: 'API',
-		version: '1.0',
+		version: '2.0',
 		schema: {
-			'rate_limit': {
-				id: 'rate_limit',
-				name: 'Rate Limit',
-				type: 'number',
-				required: false,
-				units: ['req/min', 'req/hour', 'req/day'],
-				description: 'Maximum requests per time period'
+			// Core API Information
+			'api_name': {
+				id: 'api_name',
+				name: 'API Name',
+				type: 'string',
+				required: true,
+				description: 'Official API name or service identifier'
 			},
+			'provider': {
+				id: 'provider',
+				name: 'Provider',
+				type: 'string',
+				required: true,
+				description: 'Company or organization providing the API'
+			},
+			'version': {
+				id: 'version',
+				name: 'API Version',
+				type: 'string',
+				required: true,
+				description: 'API version or protocol version'
+			},
+			'base_url': {
+				id: 'base_url',
+				name: 'Base URL',
+				type: 'string',
+				required: false,
+				description: 'API root endpoint URL'
+			},
+			
+			// Authentication & Security
 			'auth_type': {
 				id: 'auth_type',
-				name: 'Authentication',
+				name: 'Authentication Type',
 				type: 'enum',
 				required: true,
-				enums: ['OAuth 2.0', 'API Key', 'Basic', 'JWT', 'Bearer'],
-				description: 'Authentication method'
+				enums: ['OAuth 2.0', 'API Key', 'Basic Auth', 'JWT', 'Bearer Token', 'Custom Headers'],
+				description: 'Primary authentication method'
+			},
+			'https_required': {
+				id: 'https_required',
+				name: 'HTTPS Required',
+				type: 'boolean',
+				required: false,
+				description: 'Whether HTTPS/TLS is mandatory'
+			},
+			'security_headers': {
+				id: 'security_headers',
+				name: 'Security Headers',
+				type: 'string',
+				required: false,
+				description: 'Required security headers (x-api-version, etc.)'
+			},
+
+			// Rate Limits & Performance  
+			'rate_limit_minute': {
+				id: 'rate_limit_minute',
+				name: 'Rate Limit (per minute)',
+				type: 'number',
+				required: false,
+				units: ['req/min'],
+				description: 'Maximum requests per minute'
+			},
+			'rate_limit_hour': {
+				id: 'rate_limit_hour',
+				name: 'Rate Limit (per hour)',
+				type: 'number',
+				required: false,
+				units: ['req/hour'],
+				description: 'Maximum requests per hour'
+			},
+			'rate_limit_day': {
+				id: 'rate_limit_day',
+				name: 'Rate Limit (per day)',
+				type: 'number',
+				required: false,
+				units: ['req/day'],
+				description: 'Maximum requests per day'
+			},
+			'timeout': {
+				id: 'timeout',
+				name: 'Request Timeout',
+				type: 'number',
+				required: false,
+				units: ['s', 'ms'],
+				validation: { min: 0, max: 300 },
+				description: 'Maximum request timeout period'
+			},
+			
+			// Data Formats & Content
+			'request_format': {
+				id: 'request_format',
+				name: 'Request Format',
+				type: 'enum',
+				required: false,
+				enums: ['JSON', 'XML', 'Form Data', 'Multipart', 'Plain Text'],
+				description: 'Accepted request data format'
 			},
 			'response_format': {
 				id: 'response_format',
 				name: 'Response Format',
 				type: 'enum',
 				required: false,
-				enums: ['JSON', 'XML', 'CSV', 'HTML', 'Plain Text'],
+				enums: ['JSON', 'XML', 'CSV', 'HTML', 'Plain Text', 'Binary'],
 				description: 'API response data format'
+			},
+			'content_types': {
+				id: 'content_types',
+				name: 'Supported Content Types',
+				type: 'string',
+				required: false,
+				description: 'MIME types supported (application/json, video/mp4, etc.)'
+			},
+			'compression': {
+				id: 'compression',
+				name: 'Compression Support',
+				type: 'enum',
+				required: false,
+				enums: ['gzip', 'deflate', 'br', 'none'],
+				description: 'Supported compression methods'
 			},
 			'max_payload': {
 				id: 'max_payload',
@@ -167,28 +264,120 @@ export const DOMAIN_PROFILES: Record<string, DomainProfile> = {
 				units: ['MB', 'KB', 'GB'],
 				description: 'Maximum request payload size'
 			},
-			'timeout': {
-				id: 'timeout',
-				name: 'Timeout',
-				type: 'number',
+
+			// HTTP Methods & Operations
+			'http_methods': {
+				id: 'http_methods',
+				name: 'HTTP Methods',
+				type: 'string',
 				required: false,
-				units: ['s', 'ms'],
-				validation: { min: 0, max: 300 },
-				description: 'Request timeout period'
+				description: 'Supported HTTP methods (GET, POST, PUT, DELETE)'
+			},
+			'supported_objects': {
+				id: 'supported_objects',
+				name: 'Supported Objects',
+				type: 'string',
+				required: false,
+				description: 'API objects/resources (Banner, Video, Audio, Native)'
+			},
+
+			// Error Handling & Status
+			'error_codes': {
+				id: 'error_codes',
+				name: 'Error Codes',
+				type: 'string',
+				required: false,
+				description: 'HTTP status codes returned (200, 204, 400, 500)'
+			},
+			'error_format': {
+				id: 'error_format',
+				name: 'Error Format',
+				type: 'enum',
+				required: false,
+				enums: ['JSON', 'XML', 'Plain Text', 'Custom'],
+				description: 'Format of error responses'
+			},
+
+			// Compliance & Privacy
+			'compliance': {
+				id: 'compliance',
+				name: 'Compliance',
+				type: 'string',
+				required: false,
+				description: 'Privacy/regulatory compliance (COPPA, GDPR, CCPA)'
+			},
+			'privacy_features': {
+				id: 'privacy_features',
+				name: 'Privacy Features',
+				type: 'string',
+				required: false,
+				description: 'Privacy controls (Do Not Track, User Consent, etc.)'
+			},
+
+			// Backward Compatibility
+			'deprecated_fields': {
+				id: 'deprecated_fields',
+				name: 'Deprecated Fields',
+				type: 'string',
+				required: false,
+				description: 'Fields deprecated in this version'
+			},
+			'backward_compatible': {
+				id: 'backward_compatible',
+				name: 'Backward Compatible',
+				type: 'boolean',
+				required: false,
+				description: 'Compatible with previous API versions'
 			}
 		},
 		units: {
-			'rate_limit': ['req/min', 'req/hour', 'req/day', 'requests/minute'],
-			'max_payload': ['MB', 'KB', 'GB', 'bytes'],
+			'rate_limit_minute': ['req/min', 'requests/minute', 'rpm'],
+			'rate_limit_hour': ['req/hour', 'requests/hour', 'rph'],
+			'rate_limit_day': ['req/day', 'requests/day', 'rpd'],
+			'max_payload': ['MB', 'KB', 'GB', 'bytes', 'megabytes', 'kilobytes'],
 			'timeout': ['s', 'ms', 'seconds', 'milliseconds']
 		},
 		rules: [],
 		synonymsSeed: {
-			'rate_limit': ['rate_limiting', 'throttling', 'request_limit', 'quota'],
-			'auth_type': ['authentication', 'security', 'access_method'],
-			'response_format': ['format', 'output', 'data_format', 'content_type'],
-			'max_payload': ['payload_size', 'request_size', 'body_limit'],
-			'timeout': ['response_timeout', 'request_timeout', 'deadline']
+			// Core API Information
+			'api_name': ['name', 'service_name', 'api_title', 'endpoint_name'],
+			'provider': ['company', 'vendor', 'organization', 'maintainer'],
+			'version': ['api_version', 'protocol_version', 'spec_version', 'v'],
+			'base_url': ['endpoint', 'api_root', 'host_url', 'service_url'],
+
+			// Authentication & Security
+			'auth_type': ['authentication', 'auth_method', 'security', 'access_control'],
+			'https_required': ['tls_required', 'ssl_required', 'secure_transport'],
+			'security_headers': ['custom_headers', 'required_headers', 'auth_headers'],
+
+			// Rate Limits & Performance
+			'rate_limit_minute': ['rate_limit', 'throttling', 'requests_per_minute', 'rpm'],
+			'rate_limit_hour': ['hourly_limit', 'requests_per_hour', 'rph'],
+			'rate_limit_day': ['daily_limit', 'requests_per_day', 'rpd', 'quota'],
+			'timeout': ['response_timeout', 'request_timeout', 'deadline'],
+
+			// Data Formats & Content
+			'request_format': ['input_format', 'request_type', 'payload_format'],
+			'response_format': ['output_format', 'return_type', 'response_encoding'],
+			'content_types': ['mime_types', 'media_types', 'supported_content', 'data_encoding'],
+			'compression': ['encoding', 'data_compression', 'content_encoding'],
+			'max_payload': ['payload_size', 'request_size', 'body_limit', 'max_request_size'],
+
+			// HTTP Methods & Operations
+			'http_methods': ['methods', 'verbs', 'supported_methods', 'operations'],
+			'supported_objects': ['objects', 'resources', 'entities', 'data_types'],
+
+			// Error Handling & Status
+			'error_codes': ['status_codes', 'response_codes', 'http_codes'],
+			'error_format': ['error_response', 'failure_format', 'error_encoding'],
+
+			// Compliance & Privacy
+			'compliance': ['certifications', 'standards', 'regulatory_support'],
+			'privacy_features': ['privacy_controls', 'user_consent', 'data_protection'],
+
+			// Backward Compatibility
+			'deprecated_fields': ['deprecated', 'legacy_fields', 'obsolete'],
+			'backward_compatible': ['compatibility', 'legacy_support', 'version_compatibility']
 		}
 	},
 
