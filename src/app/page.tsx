@@ -197,24 +197,10 @@ function ChatCard({ onSubmit, stage, setStage, onDone }: { onSubmit: (prompt: st
 
 type Row = { icon: string; label: string; a?: string; b?: string; ok?: boolean; isCategory?: boolean };
 
-function getComparisonTitle(tableData: any): string {
-  console.log('🏷️ TableData FULL STRUCTURE:', JSON.stringify(tableData, null, 2)); // Full debug
-  console.log('🏷️ TableData keys:', Object.keys(tableData || {})); // Show all keys
-  console.log('🏷️ Direct domain check:', tableData?.domain); // Direct domain
-  console.log('🏷️ Table domain check:', tableData?.table?.domain); // Table nested domain
-  console.log('🏷️ Run domain check:', tableData?.run?.domain); // Run nested domain
-  
-  // Try multiple locations for domain
-  const domain = tableData?.domain || tableData?.table?.domain || tableData?.run?.domain || tableData?.metadata?.domain;
-  
-  if (!domain) {
-    console.log('🏷️ No domain found in any location');
-    return "Comparison";
-  }
+function getComparisonTitle(domain: string): string {
+  if (!domain) return "Comparison";
   
   const domainUpper = domain.toUpperCase();
-  console.log('🏷️ Domain found:', domainUpper);
-  
   switch (domainUpper) {
     case 'CHIP':
       return "CHIP Comparison";
@@ -227,7 +213,7 @@ function getComparisonTitle(tableData: any): string {
   }
 }
 
-function Results({ runId }: { runId?: string }) {
+function Results({ runId, domain }: { runId?: string; domain?: string }) {
   const [tableData, setTableData] = useState<any>(null);
   const [loading, setLoading] = useState(true);
   
@@ -376,7 +362,7 @@ function Results({ runId }: { runId?: string }) {
       <div className="flex items-center gap-3 mb-3">
         <div className="pill-dark px-3 py-1 flex items-center gap-2">
           <Image src="/logo1pdf.png" alt="logo" width={16} height={16} />
-          <span className="font-mono-ui text-[#d9d9d9]">{getComparisonTitle(tableData)}</span>
+          <span className="font-mono-ui text-[#d9d9d9]">{getComparisonTitle(domain || "")}</span>
         </div>
         <div className="ml-auto flex items-center gap-2">
           <ExportCSV className="bg-[#e6e6e6] border border-[#cfcfcf] px-2.5 py-1.5" tableData={tableData} />
@@ -677,11 +663,143 @@ function LandingPage() {
   );
 }
 
+interface ComparisonCard {
+  runId: string;
+  domain: string;
+  title: string;
+  createdAt: string;
+  documentCount: number;
+}
+
+interface ArchiveTabProps {
+  archivedComparisons: ComparisonCard[];
+  onOpenComparison: (runId: string, domain: string) => void;
+  onRenameComparison: (runId: string, newName: string) => void;
+}
+
+function ArchiveTab({ archivedComparisons, onOpenComparison, onRenameComparison }: ArchiveTabProps) {
+  const [editingId, setEditingId] = useState<string | null>(null);
+  const [editingName, setEditingName] = useState<string>("");
+
+  const handleStartEdit = (runId: string, currentName: string) => {
+    setEditingId(runId);
+    setEditingName(currentName);
+  };
+
+  const handleSaveEdit = (runId: string) => {
+    if (editingName.trim()) {
+      onRenameComparison(runId, editingName.trim());
+    }
+    setEditingId(null);
+    setEditingName("");
+  };
+
+  const handleCancelEdit = () => {
+    setEditingId(null);
+    setEditingName("");
+  };
+
+  if (archivedComparisons.length === 0) {
+    return (
+      <div className="max-w-[1100px] mx-auto w-full h-full">
+        <div className="panel rounded-[14px] card-shadow h-full flex flex-col">
+          <div className="p-4 flex items-center justify-between">
+            <div className="flex items-center gap-2 text-[#d9d9d9]">
+              <Archive size={18} /> 
+              <span className="font-mono-ui">Archive</span>
+            </div>
+          </div>
+          <div className="flex-1 flex items-center justify-center">
+            <div className="text-center text-[#9a9a9a]">
+              <Archive size={48} className="mx-auto mb-4 opacity-50" />
+              <h3 className="font-mono-ui text-[#d9d9d9] mb-2">No comparisons yet</h3>
+              <p className="text-sm">Your completed comparisons will appear here</p>
+            </div>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <div className="max-w-[1100px] mx-auto w-full h-full">
+      <div className="panel rounded-[14px] card-shadow h-full flex flex-col">
+        <div className="p-4 flex items-center justify-between">
+          <div className="flex items-center gap-2 text-[#d9d9d9]">
+            <Archive size={18} /> 
+            <span className="font-mono-ui">Archive</span>
+          </div>
+          <div className="text-[#9a9a9a] font-mono-ui text-sm">
+            {archivedComparisons.length} comparison{archivedComparisons.length !== 1 ? 's' : ''}
+          </div>
+        </div>
+        <div className="flex-1 overflow-y-auto p-4 grid gap-3 grid-cols-1 md:grid-cols-2">
+          {archivedComparisons.map((comparison) => (
+            <div key={comparison.runId} className="rounded-[12px] panel p-4 hover:bg-[#1b1b1b] transition-colors">
+              <div className="flex items-center gap-2 mb-2">
+                <Image src="/logo1pdf.png" alt="logo" width={16} height={16} />
+                {editingId === comparison.runId ? (
+                  <div className="flex-1 flex items-center gap-2">
+                    <input
+                      value={editingName}
+                      onChange={(e) => setEditingName(e.target.value)}
+                      onKeyDown={(e) => {
+                        if (e.key === 'Enter') handleSaveEdit(comparison.runId);
+                        if (e.key === 'Escape') handleCancelEdit();
+                      }}
+                      className="flex-1 bg-transparent text-[#d9d9d9] font-mono-ui text-sm outline-none border-b border-[#2a2a2a] focus:border-[#5f5f5f]"
+                      autoFocus
+                    />
+                    <button 
+                      onClick={() => handleSaveEdit(comparison.runId)}
+                      className="text-[#19ff6a] hover:text-[#15cc55] text-xs"
+                    >
+                      ✓
+                    </button>
+                    <button 
+                      onClick={handleCancelEdit}
+                      className="text-[#ff6b6b] hover:text-[#e55555] text-xs"
+                    >
+                      ✕
+                    </button>
+                  </div>
+                ) : (
+                  <>
+                    <span 
+                      className="font-mono-ui text-[#d9d9d9] flex-1 cursor-pointer"
+                      onClick={() => onOpenComparison(comparison.runId, comparison.domain)}
+                    >
+                      {comparison.title}
+                    </span>
+                    <button
+                      onClick={() => handleStartEdit(comparison.runId, comparison.title)}
+                      className="text-[#9a9a9a] hover:text-[#d9d9d9] text-xs"
+                      title="Rename"
+                    >
+                      ✎
+                    </button>
+                  </>
+                )}
+              </div>
+              <div className="text-[#9a9a9a] text-xs">
+                {comparison.createdAt} • {comparison.documentCount} docs • {comparison.domain}
+              </div>
+            </div>
+          ))}
+        </div>
+      </div>
+    </div>
+  );
+}
+
 function MainApp() {
   const [submitted, setSubmitted] = useState(false);
   const [loading, setLoading] = useState<"idle"|"extracting"|"normalizing"|"building"|"done">("idle");
   const [activeTab, setActiveTab] = useState<'chat'|'files'|'archive'|'results'|'settings'>('chat');
   const [lastCompletedRunId, setLastCompletedRunId] = useState<string | null>(null);
+  const [currentDomain, setCurrentDomain] = useState<string>("");
+  const [archivedComparisons, setArchivedComparisons] = useState<any[]>([]);
+  const [selectedArchiveRun, setSelectedArchiveRun] = useState<{runId: string; domain: string} | null>(null);
   
   // Load last completed run on mount
   useEffect(() => {
@@ -745,6 +863,7 @@ function MainApp() {
       // 3. Detect domain and submit
       const detectedDomain = detectDomain(prompt, files);
       console.log(`🎯 Detected domain: ${detectedDomain}`);
+      setCurrentDomain(detectedDomain); // Salva il domain nello stato
       const filesForSubmit = uploadUrls.map((u: any, i: number) => ({ ...u, filename: files[i]?.name || `document-${i+1}.pdf` }));
       await apiSubmit({ runId, prompt, files: filesForSubmit, useOcr: true, domain: detectedDomain });
       
@@ -762,6 +881,17 @@ function MainApp() {
             stop();
             console.log(`✅ Pipeline completed successfully!`);
             setLastCompletedRunId(runId);
+            
+            // Add to archived comparisons
+            const newComparison: ComparisonCard = {
+              runId,
+              domain: detectedDomain,
+              title: `${getComparisonTitle(detectedDomain)}`,
+              createdAt: new Date().toLocaleDateString(),
+              documentCount: files.length
+            };
+            setArchivedComparisons(prev => [newComparison, ...prev]);
+            
             setLoading("done");
             setActiveTab('results');
           }
@@ -795,34 +925,29 @@ function MainApp() {
               </div>
             ) : (
               <div className="max-w-[1200px] mx-auto reveal h-full">
-                <Results runId={lastCompletedRunId || ''} />
+                <Results runId={lastCompletedRunId || ''} domain={currentDomain} />
               </div>
             )
           ) : activeTab==='files' ? (
             <FilesList onAddFileToChat={handleAddFileToChat} />
           ) : activeTab==='archive' ? (
-            <div className="max-w-[1100px] mx-auto w-full h-full">
-              {/* Archive mock list */}
-              <div className="panel rounded-[14px] card-shadow h-full flex flex-col">
-                <div className="p-4 flex items-center justify-between">
-                  <div className="flex items-center gap-2 text-[#d9d9d9]"><Archive size={18} /> <span className="font-mono-ui">Archive</span></div>
-                </div>
-                <div className="flex-1 overflow-y-auto p-4 grid gap-3 grid-cols-1 md:grid-cols-2">
-                  {new Array(8).fill(0).map((_,i)=> (
-                    <button key={i} onClick={()=>setActiveTab('results')} className="text-left rounded-[12px] panel p-4 hover:bg-[#1b1b1b] transition-colors">
-                      <div className="flex items-center gap-2 mb-2">
-                        <Image src="/logo1pdf.png" alt="logo" width={16} height={16} />
-                        <span className="font-mono-ui text-[#d9d9d9]">{`Comparison #${i+1}`}</span>
-                      </div>
-                      <div className="text-[#9a9a9a] text-xs">{`2025-08-${(5+i).toString().padStart(2,'0')}`} • {2 + (i%3)} docs</div>
-                    </button>
-                  ))}
-                </div>
-              </div>
-            </div>
+            <ArchiveTab 
+              archivedComparisons={archivedComparisons}
+              onOpenComparison={(runId, domain) => {
+                setSelectedArchiveRun({runId, domain});
+                setActiveTab('results');
+              }}
+              onRenameComparison={(runId, newName) => {
+                // TODO: Implementare rename API
+                console.log('Rename comparison:', runId, newName);
+              }}
+            />
           ) : activeTab==='results' ? (
             <div className="max-w-[1200px] mx-auto reveal h-full">
-              <Results runId={lastCompletedRunId || ''} />
+              <Results 
+                runId={selectedArchiveRun?.runId || lastCompletedRunId || ''} 
+                domain={selectedArchiveRun?.domain || currentDomain} 
+              />
             </div>
           ) : activeTab==='settings' ? (
             <div className="max-w-[1000px] mx-auto w-full h-full">
@@ -830,7 +955,7 @@ function MainApp() {
             </div>
           ) : (
             <div className="max-w-[1200px] mx-auto reveal h-full">
-              <Results runId={lastCompletedRunId || ''} />
+              <Results runId={lastCompletedRunId || ''} domain={currentDomain} />
             </div>
           )}
         </div>
