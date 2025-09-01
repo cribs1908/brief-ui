@@ -1,12 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { auth } from '@clerk/nextjs/server';
-import { createClient } from '@supabase/supabase-js';
-import { ENV } from '@/lib/env';
-
-const supabase = createClient(ENV.supabaseUrl!, ENV.supabaseService!, { 
-  auth: { persistSession: false },
-  global: { headers: { Authorization: `Bearer ${ENV.supabaseService}` } }
-});
+import { getSupabaseAdmin } from '@/lib/supabase';
 
 export async function GET(request: NextRequest) {
   try {
@@ -15,8 +9,10 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
+    const supa = getSupabaseAdmin();
+
     // Get user's workspace
-    const { data: workspace } = await supabase
+    const { data: workspace } = await supa
       .from('workspaces')
       .select('id')
       .eq('clerk_user_id', userId)
@@ -27,19 +23,18 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ files: [] });
     }
 
-    // Get all documents from user's runs
-    const { data: documents, error } = await supabase
-      .from('documents')
+    // Get all documents from user's runs (using new schema)
+    const { data: documents, error } = await supa
+      .from('documents_new')
       .select(`
         id,
         filename,
-        file_size,
-        file_hash,
         storage_path,
+        pages,
         created_at,
-        runs!inner(workspace_id)
+        runs_new!inner(workspace_id)
       `)
-      .eq('runs.workspace_id', workspace.id)
+      .eq('runs_new.workspace_id', workspace.id)
       .order('created_at', { ascending: false });
 
     if (error) {
@@ -47,15 +42,16 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ error: 'Failed to fetch files' }, { status: 500 });
     }
 
-    // Format files for frontend
+    // Format files for frontend (using new schema fields)
     const files = documents?.map(doc => ({
       id: doc.id,
       filename: doc.filename,
-      fileSize: doc.file_size,
-      fileHash: doc.file_hash,
+      fileSize: 0, // Not available in new schema
+      fileHash: null, // Not available in new schema
       storagePath: doc.storage_path,
+      pages: doc.pages,
       createdAt: doc.created_at,
-      displaySize: `${(doc.file_size / (1024 * 1024)).toFixed(1)} MB`,
+      displaySize: doc.pages ? `${doc.pages} pages` : 'Unknown size',
       displayDate: new Date(doc.created_at).toLocaleDateString('en-US', {
         year: 'numeric',
         month: '2-digit',
