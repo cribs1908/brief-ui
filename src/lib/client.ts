@@ -64,3 +64,37 @@ export async function apiGetUserFiles() {
 	if (!res.ok) throw new Error(await res.text());
 	return res.json();
 }
+
+export async function apiGetComparisons() {
+	const res = await fetch('/api/comparisons');
+	if (!res.ok) throw new Error(await res.text());
+	return res.json();
+}
+
+export async function apiSaveComparison(runId: string, domain: string, title: string, documentCount: number) {
+	const res = await fetch('/api/comparisons', {
+		method: 'POST',
+		headers: { 'Content-Type': 'application/json' },
+		body: JSON.stringify({ runId, domain, title, documentCount })
+	});
+	if (!res.ok) throw new Error(await res.text());
+	return res.json();
+}
+
+export async function apiRenameComparison(runId: string, title: string) {
+	const res = await fetch(`/api/comparisons/${runId}`, {
+		method: 'PUT',
+		headers: { 'Content-Type': 'application/json' },
+		body: JSON.stringify({ title })
+	});
+	if (!res.ok) throw new Error(await res.text());
+	return res.json();
+}
+
+export async function apiDeleteComparison(runId: string) {
+	const res = await fetch(`/api/comparisons/${runId}`, {
+		method: 'DELETE'
+	});
+	if (!res.ok) throw new Error(await res.text());
+	return res.json();
+}

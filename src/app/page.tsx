@@ -2,7 +2,7 @@
 import { useMemo, useState, useEffect, useRef } from "react";
 import Image from "next/image";
 import { Paperclip, Star, ArrowUp, ChatText, FileText, MagnifyingGlass, GearSix, DotsThreeOutlineVertical, DownloadSimple, Sparkle, Asterisk, FunnelSimple, ChatsCircle, CaretDown, FilePdf, X, ArrowRight, Archive, User, Buildings, Palette, Bell, CreditCard, TrashSimple, Moon, SunDim, Shield, LockSimple } from "@phosphor-icons/react";
-import { apiCreateRun, uploadSigned, apiSubmit, listenEvents, apiResult, apiChatQnA, apiChatHistory } from "@/lib/client";
+import { apiCreateRun, uploadSigned, apiSubmit, listenEvents, apiResult, apiChatQnA, apiChatHistory, apiGetComparisons, apiSaveComparison, apiRenameComparison, apiDeleteComparison } from "@/lib/client";
 import { UserButton, SignInButton, SignUpButton, SignedIn, SignedOut } from "@clerk/nextjs";
 import FilesList from "@/components/FilesList";
 
@@ -675,9 +675,10 @@ interface ArchiveTabProps {
   archivedComparisons: ComparisonCard[];
   onOpenComparison: (runId: string, domain: string) => void;
   onRenameComparison: (runId: string, newName: string) => void;
+  onDeleteComparison: (runId: string) => void;
 }
 
-function ArchiveTab({ archivedComparisons, onOpenComparison, onRenameComparison }: ArchiveTabProps) {
+function ArchiveTab({ archivedComparisons, onOpenComparison, onRenameComparison, onDeleteComparison }: ArchiveTabProps) {
   const [editingId, setEditingId] = useState<string | null>(null);
   const [editingName, setEditingName] = useState<string>("");
 
@@ -733,10 +734,10 @@ function ArchiveTab({ archivedComparisons, onOpenComparison, onRenameComparison 
             {archivedComparisons.length} comparison{archivedComparisons.length !== 1 ? 's' : ''}
           </div>
         </div>
-        <div className="flex-1 overflow-y-auto p-4 grid gap-3 grid-cols-1 md:grid-cols-2">
+        <div className="flex-1 overflow-y-auto p-4 grid gap-2 grid-cols-1 md:grid-cols-2 lg:grid-cols-3">
           {archivedComparisons.map((comparison) => (
-            <div key={comparison.runId} className="rounded-[12px] panel p-3 hover:bg-[#1b1b1b] transition-colors">
-              <div className="flex items-center gap-2 mb-1">
+            <div key={comparison.runId} className="rounded-[8px] panel p-2.5 hover:bg-[#1b1b1b] transition-colors min-h-[80px] max-h-[80px] flex flex-col justify-between">
+              <div className="flex items-center gap-2 mb-1 min-h-0">
                 <Image src="/logo1pdf.png" alt="logo" width={16} height={16} />
                 {editingId === comparison.runId ? (
                   <div className="flex-1 flex items-center gap-2">
@@ -747,7 +748,7 @@ function ArchiveTab({ archivedComparisons, onOpenComparison, onRenameComparison 
                         if (e.key === 'Enter') handleSaveEdit(comparison.runId);
                         if (e.key === 'Escape') handleCancelEdit();
                       }}
-                      className="flex-1 bg-transparent text-[#d9d9d9] font-mono-ui text-sm outline-none border-b border-[#2a2a2a] focus:border-[#5f5f5f]"
+                      className="flex-1 bg-transparent text-[#d9d9d9] font-mono-ui text-xs outline-none border-b border-[#2a2a2a] focus:border-[#5f5f5f]"
                       autoFocus
                     />
                     <button 
@@ -766,22 +767,34 @@ function ArchiveTab({ archivedComparisons, onOpenComparison, onRenameComparison 
                 ) : (
                   <>
                     <span 
-                      className="font-mono-ui text-[#d9d9d9] flex-1 cursor-pointer"
+                      className="font-mono-ui text-[#d9d9d9] flex-1 cursor-pointer text-xs truncate"
                       onClick={() => onOpenComparison(comparison.runId, comparison.domain)}
+                      title={comparison.title}
                     >
                       {comparison.title}
                     </span>
                     <button
                       onClick={() => handleStartEdit(comparison.runId, comparison.title)}
-                      className="text-[#9a9a9a] hover:text-[#d9d9d9] text-xs"
+                      className="text-[#9a9a9a] hover:text-[#d9d9d9] text-xs mr-1"
                       title="Rename"
                     >
                       ✎
                     </button>
+                    <button
+                      onClick={() => {
+                        if (confirm('Are you sure you want to delete this comparison?')) {
+                          onDeleteComparison(comparison.runId);
+                        }
+                      }}
+                      className="text-[#9a9a9a] hover:text-[#ff6b6b] text-xs"
+                      title="Delete"
+                    >
+                      <TrashSimple size={12} />
+                    </button>
                   </>
                 )}
               </div>
-              <div className="text-[#9a9a9a] text-xs">
+              <div className="text-[#9a9a9a] text-[10px] truncate mt-auto">
                 {comparison.createdAt} • {comparison.documentCount} docs • {comparison.domain}
               </div>
             </div>
@@ -801,13 +814,34 @@ function MainApp() {
   const [archivedComparisons, setArchivedComparisons] = useState<any[]>([]);
   const [selectedArchiveRun, setSelectedArchiveRun] = useState<{runId: string; domain: string} | null>(null);
   
-  // Load last completed run on mount
+  // Load archived comparisons on mount (always)
   useEffect(() => {
-    async function loadLastRun() {
+    async function loadArchivedComparisons() {
+      try {
+        console.log('📋 Loading archived comparisons...');
+        const comparisonsResponse = await apiGetComparisons();
+        if (comparisonsResponse.comparisons) {
+          setArchivedComparisons(comparisonsResponse.comparisons);
+          console.log(`📋 Loaded ${comparisonsResponse.comparisons.length} archived comparisons`);
+        } else {
+          console.log('📋 No archived comparisons found');
+          setArchivedComparisons([]);
+        }
+      } catch (error) {
+        console.error('❌ Error loading archived comparisons:', error);
+        setArchivedComparisons([]);
+      }
+    }
+    
+    loadArchivedComparisons();
+  }, []); // Only run once on mount
+  
+  // Load last completed run separately (only if we don't have one)
+  useEffect(() => {
+    async function loadLastCompletedRun() {
       if (lastCompletedRunId) return; // Already have one
       
       try {
-        // Try to get the most recent completed run for this user
         const response = await fetch('/api/chat/latest-run');
         if (response.ok) {
           const data = await response.json();
@@ -817,11 +851,11 @@ function MainApp() {
           }
         }
       } catch (error) {
-        console.log('No previous runs found or error loading:', error);
+        console.log('Error loading last completed run:', error);
       }
     }
     
-    loadLastRun();
+    loadLastCompletedRun();
   }, [lastCompletedRunId]);
   const [selectedFilesFromList, setSelectedFilesFromList] = useState<{filename: string, fileId: string}[]>([]);
   
@@ -882,15 +916,34 @@ function MainApp() {
             console.log(`✅ Pipeline completed successfully!`);
             setLastCompletedRunId(runId);
             
-            // Add to archived comparisons
-            const newComparison: ComparisonCard = {
-              runId,
-              domain: detectedDomain,
-              title: `${getComparisonTitle(detectedDomain)}`,
-              createdAt: new Date().toLocaleDateString(),
-              documentCount: files.length
-            };
-            setArchivedComparisons(prev => [newComparison, ...prev]);
+            // Save comparison to database
+            try {
+              const title = getComparisonTitle(detectedDomain);
+              await apiSaveComparison(runId, detectedDomain, title, files.length);
+              
+              // Add to local state for immediate UI update
+              const newComparison: ComparisonCard = {
+                runId,
+                domain: detectedDomain,
+                title,
+                createdAt: new Date().toLocaleDateString(),
+                documentCount: files.length
+              };
+              setArchivedComparisons(prev => [newComparison, ...prev]);
+              console.log('✅ Comparison saved to database and added to archive');
+              
+            } catch (error) {
+              console.error('❌ Failed to save comparison:', error);
+              // Still add to local state even if save fails
+              const newComparison: ComparisonCard = {
+                runId,
+                domain: detectedDomain,
+                title: getComparisonTitle(detectedDomain),
+                createdAt: new Date().toLocaleDateString(),
+                documentCount: files.length
+              };
+              setArchivedComparisons(prev => [newComparison, ...prev]);
+            }
             
             setLoading("done");
             setActiveTab('results');
@@ -937,15 +990,38 @@ function MainApp() {
                 setSelectedArchiveRun({runId, domain});
                 setActiveTab('results');
               }}
-              onRenameComparison={(runId, newName) => {
-                setArchivedComparisons(prev => 
-                  prev.map(comp => 
-                    comp.runId === runId 
-                      ? { ...comp, title: newName }
-                      : comp
-                  )
-                );
-                console.log('Renamed comparison:', runId, newName);
+              onRenameComparison={async (runId, newName) => {
+                try {
+                  await apiRenameComparison(runId, newName);
+                  setArchivedComparisons(prev => 
+                    prev.map(comp => 
+                      comp.runId === runId 
+                        ? { ...comp, title: newName }
+                        : comp
+                    )
+                  );
+                  console.log('✅ Comparison renamed successfully:', runId, newName);
+                } catch (error) {
+                  console.error('❌ Failed to rename comparison:', error);
+                  alert('Failed to rename comparison. Please try again.');
+                }
+              }}
+              onDeleteComparison={async (runId) => {
+                try {
+                  await apiDeleteComparison(runId);
+                  setArchivedComparisons(prev => prev.filter(comp => comp.runId !== runId));
+                  
+                  // If we're currently viewing this comparison, go back to chat
+                  if (selectedArchiveRun?.runId === runId) {
+                    setSelectedArchiveRun(null);
+                    setActiveTab('chat');
+                  }
+                  
+                  console.log('✅ Comparison deleted successfully:', runId);
+                } catch (error) {
+                  console.error('❌ Failed to delete comparison:', error);
+                  alert('Failed to delete comparison. Please try again.');
+                }
               }}
             />
           ) : activeTab==='results' ? (
