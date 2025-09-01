@@ -32,7 +32,12 @@ export function listenEvents(runId: string, onEvent: (ev: any)=>void) {
 		}
 	};
 	es.onerror = (error) => {
-		console.error(`❌ EventSource error:`, error);
+		// Only log non-normal disconnection errors
+		if (es.readyState === EventSource.CLOSED) {
+			console.log(`🔚 EventSource connection closed normally`);
+		} else {
+			console.error(`❌ EventSource error:`, error);
+		}
 	};
 	return () => es.close();
 }
