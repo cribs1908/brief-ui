@@ -1,4 +1,3 @@
-<<<<<<< HEAD
 # See https://help.github.com/articles/ignoring-files/ for more about ignoring files.
 
 # dependencies
@@ -40,8 +39,8 @@ yarn-error.log*
 # typescript
 *.tsbuildinfo
 next-env.d.ts
-=======
-node_modules/
-.env
-*.json
->>>>>>> 4e740de (Initial commit: Brief AI complete system with enhanced CHIP extraction)
+
+# Keep specific JSON files
+!vercel.json
+!package.json
+!package-lock.json
