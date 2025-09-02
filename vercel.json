@@ -1,6 +1,0 @@
-{
-  "buildCommand": "cd brief-ui && npm run build",
-  "outputDirectory": "brief-ui/.next", 
-  "installCommand": "cd brief-ui && npm install",
-  "framework": "nextjs"
-}
