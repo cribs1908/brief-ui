@@ -19,7 +19,7 @@ export default function Page() {
 						socialButtonsBlockButton: "bg-gray-900 border-gray-700 !text-white hover:bg-gray-800 font-mono",
 						formFieldLabel: "!text-white font-mono",
 						formFieldInput: "bg-gray-900 border-gray-700 !text-white font-mono focus:border-gray-600",
-						formButtonPrimary: "bg-white !text-black hover:bg-gray-200 font-mono",
+						formButtonPrimary: "!bg-white !text-black hover:!bg-gray-200 font-mono",
 						footerActionLink: "!text-white font-mono hover:!text-gray-300",
 						footerActionText: "!text-gray-400 font-mono",
 						identityPreviewText: "!text-white font-mono",
