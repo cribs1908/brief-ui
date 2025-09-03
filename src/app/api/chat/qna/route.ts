@@ -3,9 +3,14 @@ import { getSupabaseAdmin, STORAGE_BUCKET } from '@/lib/supabase';
 import { ENV } from '@/lib/env';
 import OpenAI from 'openai';
 
-const openai = new OpenAI({
-	apiKey: ENV.openaiKey,
-});
+function getOpenAI() {
+	if (!ENV.openaiKey) {
+		throw new Error('OPENAI_API_KEY is not configured');
+	}
+	return new OpenAI({
+		apiKey: ENV.openaiKey,
+	});
+}
 
 // Domain detection from table structure
 function detectDomainFromTable(tableData: any): string {
@@ -296,6 +301,7 @@ ${getResponseTemplate(domain)}
 
 **CRITICAL**: Be concise, technical, and actionable. No lengthy explanations.`;
 
+		const openai = getOpenAI();
 		const completion = await openai.chat.completions.create({
 			model: ENV.openaiModel,
 			messages: [

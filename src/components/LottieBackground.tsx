@@ -1,7 +1,7 @@
 "use client";
 
 import Lottie from "lottie-react";
-import animationData from "../../public/JSON.json";
+import animationData from "../../public/animation.json";
 
 interface LottieBackgroundProps {
   className?: string;

@@ -1,7 +1,12 @@
 import OpenAI from 'openai';
 import { ENV } from './env';
 
-const openai = new OpenAI({ apiKey: ENV.openaiKey });
+function getOpenAI() {
+	if (!ENV.openaiKey) {
+		throw new Error('OPENAI_API_KEY is not configured');
+	}
+	return new OpenAI({ apiKey: ENV.openaiKey });
+}
 
 export interface FieldExtraction {
 	fieldId: string;
@@ -63,6 +68,7 @@ CRITICAL: Return ONLY valid JSON array, no markdown formatting, no explanations.
 	
 	const user = JSON.stringify(userData);
 	
+	const openai = getOpenAI();
 	const res = await openai.chat.completions.create({
 		model: ENV.openaiModel || 'gpt-4o-mini',
 		messages: [ 
