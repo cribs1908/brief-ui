@@ -1,5 +1,6 @@
 #!/usr/bin/env node
 
+<<<<<<< HEAD
 /**
  * Test rapido della pipeline completa
  */
@@ -101,3 +102,110 @@ if (typeof EventSource === 'undefined') {
 }
 
 testPipeline();
+=======
+const fs = require('fs');
+const path = require('path');
+
+console.log('🧪 Brief AI Pipeline Test');
+
+// Test configuration
+const TEST_CONFIG = {
+  baseUrl: 'http://localhost:3000',
+  workspaceId: '00000000-0000-0000-0000-000000000001',
+  testFiles: [
+    // We'll create these files with mock PDF content
+    { name: 'chip1.pdf', content: 'Mock PDF content for chip 1' },
+    { name: 'chip2.pdf', content: 'Mock PDF content for chip 2' }
+  ]
+};
+
+async function testPipeline() {
+  try {
+    console.log('📡 Testing API endpoints...');
+    
+    // 1. Test health endpoints
+    console.log('1. Testing services health...');
+    
+    // Test Tabula
+    try {
+      const tabulaResponse = await fetch('http://localhost:3004/health');
+      const tabulaData = await tabulaResponse.json();
+      console.log('✅ Tabula service healthy:', tabulaData.status);
+    } catch (e) {
+      console.log('❌ Tabula service failed:', e.message);
+    }
+    
+    // Test OCR service
+    try {
+      const ocrResponse = await fetch('http://localhost:3002/health');
+      const ocrData = await ocrResponse.json();
+      console.log('✅ OCR service healthy:', ocrData.status);
+    } catch (e) {
+      console.log('❌ OCR service failed:', e.message);
+    }
+    
+    // 2. Test create run
+    console.log('\n2. Creating run...');
+    const createResponse = await fetch(`${TEST_CONFIG.baseUrl}/api/chat/create`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        workspaceId: TEST_CONFIG.workspaceId,
+        files: TEST_CONFIG.testFiles.map(f => ({ filename: f.name }))
+      })
+    });
+    
+    if (!createResponse.ok) {
+      throw new Error(`Create failed: ${createResponse.status} ${await createResponse.text()}`);
+    }
+    
+    const createData = await createResponse.json();
+    console.log('✅ Run created:', createData.runId);
+    
+    // 3. Upload mock files (skip actual file upload for this test)
+    console.log('\n3. Skipping file upload (would upload to signed URLs)');
+    
+    // 4. Submit run
+    console.log('\n4. Submitting run...');
+    const submitResponse = await fetch(`${TEST_CONFIG.baseUrl}/api/chat/submit`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        runId: createData.runId,
+        workspaceId: TEST_CONFIG.workspaceId,
+        prompt: 'Compare these two chips',
+        domain: 'Chip',
+        files: createData.uploadUrls.map(url => ({
+          id: url.id,
+          filename: TEST_CONFIG.testFiles.find(f => url.storagePath.includes(f.name))?.name,
+          storagePath: url.storagePath
+        }))
+      })
+    });
+    
+    if (!submitResponse.ok) {
+      throw new Error(`Submit failed: ${submitResponse.status} ${await submitResponse.text()}`);
+    }
+    
+    const submitData = await submitResponse.json();
+    console.log('✅ Run submitted:', submitData);
+    
+    // 5. Monitor SSE events (simplified test)
+    console.log('\n5. Testing SSE endpoint...');
+    console.log(`Would monitor: ${TEST_CONFIG.baseUrl}/api/chat/events?runId=${createData.runId}`);
+    console.log('Note: SSE testing requires actual file upload and processing');
+    
+    console.log('\n🎉 Pipeline endpoints are functional!');
+    console.log('\nNext steps:');
+    console.log('1. Upload actual PDF files through the UI');
+    console.log('2. Monitor processing via browser console');
+    console.log('3. Verify table generation works correctly');
+    
+  } catch (error) {
+    console.error('❌ Test failed:', error.message);
+    process.exit(1);
+  }
+}
+
+testPipeline();
+>>>>>>> 4e740de (Initial commit: Brief AI complete system with enhanced CHIP extraction)

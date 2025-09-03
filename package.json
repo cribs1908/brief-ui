@@ -1,4 +1,5 @@
 {
+<<<<<<< HEAD
   "name": "brief-ui",
   "version": "0.1.0",
   "private": true,
@@ -39,5 +40,19 @@
     "eslint-config-next": "15.5.2",
     "tailwindcss": "^4",
     "typescript": "^5"
+=======
+  "name": "brief",
+  "version": "1.0.0",
+  "description": "",
+  "main": "create-test-pdf.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "dependencies": {
+    "axios": "^1.11.0"
+>>>>>>> 4e740de (Initial commit: Brief AI complete system with enhanced CHIP extraction)
   }
 }
