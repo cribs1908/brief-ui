@@ -6,6 +6,295 @@ import { apiCreateRun, uploadSigned, apiSubmit, listenEvents, apiResult, apiChat
 import { UserButton, SignInButton, SignUpButton, SignedIn, SignedOut } from "@clerk/nextjs";
 import FilesList from "@/components/FilesList";
 
+// Parse value to extract number, unit, and confidence
+function parseValue(value: string): { 
+  displayValue: string; 
+  unit: string; 
+  confidence: number; 
+  hasUnit: boolean 
+} {
+  if (!value || value === '-') {
+    return { displayValue: '-', unit: '', confidence: 0, hasUnit: false };
+  }
+  
+  // Extract unit patterns (V, mA, µA, °C, dB, dBm, MHz, GHz, Ω, mm, etc.)
+  const unitMatch = value.match(/(\d+\.?\d*)\s*(V|mA|µA|mW|°C|dB|dBm|MHz|GHz|Ω|mm|kV)\b/i);
+  const hasUnit = !!unitMatch;
+  
+  // Mock confidence based on value completeness (in real app, this would come from API)
+  let confidence = 0.5;
+  if (value.includes('/') || value.includes('-')) confidence += 0.2; // Range values
+  if (hasUnit) confidence += 0.2; // Has proper units
+  if (value.match(/@[\w\s,=]+/)) confidence += 0.1; // Has conditions
+  confidence = Math.min(confidence, 1.0);
+  
+  return {
+    displayValue: value,
+    unit: unitMatch ? unitMatch[2] : '',
+    confidence,
+    hasUnit
+  };
+}
+
+// Get confidence badge color and icon
+function getConfidenceBadge(confidence: number): { color: string; icon: string } {
+  if (confidence >= 0.85) return { color: '#19FF6A', icon: '●' }; // Green
+  if (confidence >= 0.6) return { color: '#FFA500', icon: '●' }; // Orange  
+  return { color: '#FF4444', icon: '●' }; // Red
+}
+
+// Domain pill component for headers
+function DomainPill({ domain, deviceName }: { domain: string; deviceName: string }) {
+  const domainColors = {
+    'CHIP': { bg: '#1F2937', text: '#10B981', border: '#065F46' },
+    'RF': { bg: '#1E1B4B', text: '#8B5CF6', border: '#4C1D95' },
+    'PGA': { bg: '#7C2D12', text: '#F97316', border: '#9A3412' },
+    'API': { bg: '#1E3A8A', text: '#3B82F6', border: '#1E40AF' },
+    'SAAS': { bg: '#701A75', text: '#C084FC', border: '#86198F' }
+  };
+  
+  // Detect specific device types
+  let detectedDomain = domain;
+  if (deviceName.toLowerCase().includes('trf') || deviceName.toLowerCase().includes('rf')) {
+    detectedDomain = 'RF';
+  } else if (deviceName.toLowerCase().includes('pga') || deviceName.toLowerCase().includes('amplifier')) {
+    detectedDomain = 'PGA';
+  }
+  
+  const colors = domainColors[detectedDomain as keyof typeof domainColors] || domainColors.CHIP;
+  
+  return (
+    <span 
+      className="text-[9px] px-1.5 py-0.5 rounded-full font-mono uppercase tracking-wide"
+      style={{ 
+        backgroundColor: colors.bg, 
+        color: colors.text, 
+        border: `1px solid ${colors.border}` 
+      }}
+    >
+      {detectedDomain}
+    </span>
+  );
+}
+
+// Determine if a field is buyer-critical
+function isBuyerCriticalField(fieldName: string): boolean {
+  const criticalFields = [
+    // Core identification and specs
+    'part number', 'model', 'device type', 'package', 'pins',
+    
+    // Power and electrical (most critical for selection)
+    'supply voltage', 'operating voltage', 'current consumption', 'power consumption',
+    'input voltage', 'output voltage', 'max current', 'quiescent current',
+    
+    // Performance critical specs
+    'frequency', 'bandwidth', 'gain', 'accuracy', 'resolution',
+    'temperature range', 'operating temperature',
+    
+    // Protection and reliability  
+    'esd protection', 'ovp', 'ocp', 'thermal protection',
+    'breakdown voltage', 'max ratings',
+    
+    // Interface and compatibility
+    'interface', 'communication', 'protocol', 'gpio', 'i2c', 'spi',
+    
+    // Packaging and availability
+    'package type', 'mounting', 'price', 'availability', 'lead time',
+    'automotive qualified', 'certifications'
+  ];
+  
+  const normalizedField = fieldName.toLowerCase();
+  return criticalFields.some(critical => 
+    normalizedField.includes(critical) || critical.includes(normalizedField)
+  );
+}
+
+// Determine if field is relevant for domain
+function isFieldRelevantForDomain(fieldName: string, domain: string, deviceName: string): boolean {
+  const lowerField = fieldName.toLowerCase();
+  const lowerDevice = deviceName.toLowerCase();
+  
+  // Always show core identification fields
+  const coreFields = [
+    'part number', 'model', 'device type', 'package', 'pins',
+    'supply voltage', 'operating voltage', 'temperature range',
+    'current consumption', 'power consumption'
+  ];
+  
+  if (coreFields.some(field => lowerField.includes(field))) {
+    return true;
+  }
+  
+  // RF-specific fields
+  const rfFields = [
+    'frequency', 'gain', 'noise figure', 'ip3', 'op1db', 'p1db',
+    'bandwidth', 'vswr', 'isolation', 'rejection', 's-parameter',
+    'input impedance', 'output impedance', 'matching'
+  ];
+  
+  // Power management fields  
+  const powerFields = [
+    'efficiency', 'dropout', 'regulation', 'ripple', 'psrr',
+    'load regulation', 'line regulation', 'switching frequency',
+    'quiescent current', 'shutdown current', 'enable', 'soft start'
+  ];
+  
+  // Amplifier/PGA fields
+  const ampFields = [
+    'gain', 'offset', 'drift', 'noise', 'thd', 'snr', 'cmrr',
+    'input bias', 'input offset', 'slew rate', 'gbw', 'settling time',
+    'bandwidth', 'distortion', 'dynamic range'
+  ];
+  
+  // Digital/MCU fields
+  const digitalFields = [
+    'cpu', 'core', 'memory', 'flash', 'ram', 'gpio', 'timer',
+    'adc', 'dac', 'spi', 'i2c', 'uart', 'can', 'usb', 'ethernet',
+    'instruction', 'cache', 'dma', 'interrupt'
+  ];
+  
+  // Check if field is RF-related but device is not RF
+  const isRFField = rfFields.some(field => lowerField.includes(field));
+  const isRFDevice = lowerDevice.includes('rf') || lowerDevice.includes('trf') || 
+                    lowerDevice.includes('mixer') || lowerDevice.includes('amplifier');
+  
+  if (isRFField && !isRFDevice) return false;
+  
+  // Check if field is power management but device is not power-related
+  const isPowerField = powerFields.some(field => lowerField.includes(field));
+  const isPowerDevice = lowerDevice.includes('regulator') || lowerDevice.includes('converter') ||
+                       lowerDevice.includes('psu') || lowerDevice.includes('power');
+  
+  if (isPowerField && !isPowerDevice && !lowerDevice.includes('pga')) return false;
+  
+  // Check if field is amplifier-specific
+  const isAmpField = ampFields.some(field => lowerField.includes(field));
+  const isAmpDevice = lowerDevice.includes('amplifier') || lowerDevice.includes('pga') ||
+                     lowerDevice.includes('opamp') || lowerDevice.includes('amp');
+  
+  if (isAmpField && !isAmpDevice && !isRFDevice) return false;
+  
+  // Check if field is digital/MCU specific
+  const isDigitalField = digitalFields.some(field => lowerField.includes(field));
+  const isDigitalDevice = lowerDevice.includes('mcu') || lowerDevice.includes('processor') ||
+                         lowerDevice.includes('controller') || lowerDevice.includes('cpu');
+  
+  if (isDigitalField && !isDigitalDevice) return false;
+  
+  return true;
+}
+
+// Detect red flags in values
+function detectRedFlags(fieldName: string, value: string): { hasFlag: boolean; reason: string } {
+  if (!value || value === '-') return { hasFlag: false, reason: '' };
+  
+  const lowerValue = value.toLowerCase();
+  const lowerField = fieldName.toLowerCase();
+  
+  // Missing critical data
+  if (lowerValue.includes('n/a') || lowerValue.includes('not available') || 
+      lowerValue.includes('not specified') || lowerValue.includes('tbd') ||
+      lowerValue.includes('to be determined')) {
+    return { hasFlag: true, reason: 'Missing critical specification' };
+  }
+  
+  // End of life or deprecated
+  if (lowerValue.includes('eol') || lowerValue.includes('discontinued') || 
+      lowerValue.includes('obsolete') || lowerValue.includes('deprecated')) {
+    return { hasFlag: true, reason: 'Product end-of-life' };
+  }
+  
+  // Supply voltage issues
+  if (lowerField.includes('voltage') || lowerField.includes('supply')) {
+    if (lowerValue.includes('0v') || lowerValue.includes('0 v')) {
+      return { hasFlag: true, reason: 'Zero supply voltage' };
+    }
+  }
+  
+  // Temperature range issues
+  if (lowerField.includes('temperature')) {
+    if (lowerValue.includes('unlimited') || lowerValue.includes('no limit')) {
+      return { hasFlag: true, reason: 'Suspicious temperature spec' };
+    }
+  }
+  
+  // Package/availability issues
+  if (lowerField.includes('package') || lowerField.includes('mounting')) {
+    if (lowerValue.includes('bare die') || lowerValue.includes('wafer')) {
+      return { hasFlag: true, reason: 'Not production-ready' };
+    }
+  }
+  
+  // Extremely long lead times
+  if (lowerField.includes('lead time') || lowerField.includes('delivery')) {
+    if (lowerValue.includes('year') || lowerValue.includes('52 week') || 
+        lowerValue.includes('>1 year')) {
+      return { hasFlag: true, reason: 'Extended lead time' };
+    }
+  }
+  
+  // Compliance issues
+  if (lowerField.includes('rohs') || lowerField.includes('reach')) {
+    if (lowerValue.includes('non-compliant') || lowerValue.includes('no')) {
+      return { hasFlag: true, reason: 'Compliance issue' };
+    }
+  }
+  
+  return { hasFlag: false, reason: '' };
+}
+
+// Enhanced cell component with confidence badge and unit highlighting
+function EnhancedCell({ 
+  parsed, 
+  fieldName = '', 
+  isCategory = false 
+}: { 
+  parsed: { displayValue: string; unit: string; confidence: number; hasUnit: boolean }; 
+  fieldName?: string;
+  isCategory?: boolean;
+}) {
+  if (isCategory || !parsed || parsed.displayValue === '-') {
+    return <div className="text-[#d9d9d9]">{parsed?.displayValue || ''}</div>;
+  }
+
+  const badge = getConfidenceBadge(parsed.confidence);
+  const redFlag = detectRedFlags(fieldName, parsed.displayValue);
+  
+  return (
+    <div className="flex items-center gap-2 text-[#d9d9d9] group">
+      <span className="flex-1">{parsed.displayValue}</span>
+      
+      {/* Red flag indicator */}
+      {redFlag.hasFlag && (
+        <span 
+          className="text-red-500 text-xs cursor-help" 
+          title={redFlag.reason}
+        >
+          🚩
+        </span>
+      )}
+      
+      {/* Confidence badge */}
+      {parsed.confidence > 0 && (
+        <span 
+          style={{ color: badge.color }}
+          className="text-xs opacity-70 group-hover:opacity-100 transition-opacity cursor-help"
+          title={`Confidence: ${(parsed.confidence * 100).toFixed(0)}%`}
+        >
+          {badge.icon}
+        </span>
+      )}
+      
+      {/* Unit badge */}
+      {parsed.hasUnit && (
+        <span className="text-[10px] text-[#7C7C7C] bg-[#1F1F1F] px-1 py-0.5 rounded opacity-60 group-hover:opacity-100 transition-opacity">
+          {parsed.unit}
+        </span>
+      )}
+    </div>
+  );
+}
+
 // Detect domain based on prompt and file names
 function detectDomain(prompt: string, files: File[]): string {
   const text = `${prompt} ${files.map(f => f.name).join(' ')}`.toLowerCase();
@@ -195,7 +484,16 @@ function ChatCard({ onSubmit, stage, setStage, onDone }: { onSubmit: (prompt: st
   );
 }
 
-type Row = { icon: string; label: string; a?: string; b?: string; ok?: boolean; isCategory?: boolean };
+type Row = { 
+  icon: string; 
+  label: string; 
+  a?: string; 
+  b?: string; 
+  ok?: boolean; 
+  isCategory?: boolean;
+  parsedA?: { displayValue: string; unit: string; confidence: number; hasUnit: boolean };
+  parsedB?: { displayValue: string; unit: string; confidence: number; hasUnit: boolean };
+};
 
 function getComparisonTitle(domain: string): string {
   if (!domain) return "Comparison";
@@ -241,7 +539,7 @@ function Results({ runId, domain }: { runId?: string; domain?: string }) {
   }, [runId]);
   
   // Convert real data to display format
-  const rows: Row[] = useMemo(() => {
+  const allRows: Row[] = useMemo(() => {
     if (!tableData?.table?.rows || !tableData?.table?.columns) {
       // Fallback to empty or minimal data
       return [
@@ -254,28 +552,90 @@ function Results({ runId, domain }: { runId?: string; domain?: string }) {
     return tableRows.map((row: any, index: number) => {
       // API returns simple array format: ["Field Name", "Value 1", "Value 2"]
       const fieldName = row[0] || `Field ${index + 1}`;
-      const value1 = row[1] || '';
-      const value2 = row[2] || '';
+      const rawValue1 = row[1] || '';
+      const rawValue2 = row[2] || '';
+      
+      // Parse values for enhanced display
+      const parsedValue1 = parseValue(rawValue1);
+      const parsedValue2 = parseValue(rawValue2);
       
       // Clean up field name - remove "FIELD GROUP:" prefix and improve formatting
       const cleanLabel = fieldName
         .replace(/^FIELD GROUP:\s*/i, '') // Remove "FIELD GROUP:" prefix
+        .replace(/🔹\s*/g, '') // Remove bullet points
         .replace(/_/g, ' ')
         .toUpperCase();
       
-      // Check if this is a category separator (no values, just a group header)
-      const isCategory = !value1 && !value2 && fieldName.includes(':');
+      // Check if this is a category separator (starts with 🔹 and no meaningful values)
+      const isCategory = fieldName.includes('🔹') || (!rawValue1 && !rawValue2 && fieldName.includes(':'));
       
       return {
         icon: "pricing", // Default icon, could be made dynamic  
         label: cleanLabel,
-        a: value1,
-        b: value2, // Always show value2, even if same as value1
-        ok: value1 !== 'Processing failed' && value1 !== 'Processing...',
+        a: rawValue1,
+        b: rawValue2,
+        parsedA: parsedValue1,
+        parsedB: parsedValue2,
+        ok: rawValue1 !== 'Processing failed' && rawValue1 !== 'Processing...',
         isCategory: isCategory
       };
     });
   }, [tableData]);
+
+  // Filter rows based on toggles
+  const rows = useMemo(() => {
+    let filteredRows = allRows;
+    
+    // Apply domain relevance filter first
+    if (domainRelevant) {
+      filteredRows = filteredRows.filter(row => {
+        // Always show category rows
+        if (row.isCategory) return true;
+        
+        // Check relevance for both devices
+        const device1 = colLabels[1] || '';
+        const device2 = colLabels[2] || '';
+        const isRelevant1 = isFieldRelevantForDomain(row.label, domain || 'CHIP', device1);
+        const isRelevant2 = isFieldRelevantForDomain(row.label, domain || 'CHIP', device2);
+        
+        // Show field if relevant for either device
+        return isRelevant1 || isRelevant2;
+      });
+    }
+    
+    // Apply buyer-critical filter
+    if (buyerCritical) {
+      filteredRows = filteredRows.filter(row => {
+        // Always show category rows
+        if (row.isCategory) return true;
+        
+        // Show only buyer-critical fields
+        return isBuyerCriticalField(row.label);
+      });
+    }
+    
+    // Apply only differences filter
+    if (onlyDifferences) {
+      filteredRows = filteredRows.filter(row => {
+        // Always show category rows
+        if (row.isCategory) return true;
+        
+        // Show rows where values are different (normalize for comparison)
+        const valueA = (row.a || '').toString().toLowerCase().trim();
+        const valueB = (row.b || '').toString().toLowerCase().trim();
+        
+        // Skip empty or processing rows
+        if (!valueA || !valueB || valueA === 'processing...' || valueB === 'processing...' || 
+            valueA === 'processing failed' || valueB === 'processing failed') {
+          return true;
+        }
+        
+        return valueA !== valueB;
+      });
+    }
+    
+    return filteredRows;
+  }, [allRows, onlyDifferences, buyerCritical, domainRelevant, colLabels, domain]);
 
   // Etichette colonne dinamiche dai risultati
   const colLabels = useMemo(() => {
@@ -291,6 +651,9 @@ function Results({ runId, domain }: { runId?: string; domain?: string }) {
   const [miniMessages, setMiniMessages] = useState<{id:number; role:'user'|'ai'; content:string; thinking?:boolean;}[]>([]);
   const [miniInput, setMiniInput] = useState("");
   const [miniStage, setMiniStage] = useState<'idle'|'thinking'>("idle");
+  const [onlyDifferences, setOnlyDifferences] = useState(false);
+  const [buyerCritical, setBuyerCritical] = useState(false);
+  const [domainRelevant, setDomainRelevant] = useState(false);
   const tableFileInput = useRef<HTMLInputElement|null>(null);
 
   // Load chat history when chat opens
@@ -365,6 +728,45 @@ function Results({ runId, domain }: { runId?: string; domain?: string }) {
           <span className="font-mono-ui text-[#d9d9d9]">{getComparisonTitle(domain || "")}</span>
         </div>
         <div className="ml-auto flex items-center gap-2">
+          <button
+            onClick={() => setDomainRelevant(!domainRelevant)}
+            className={`px-2.5 py-1.5 rounded-[8px] border font-mono-ui text-xs transition-colors ${
+              domainRelevant 
+                ? 'bg-[--accent] text-black border-[--accent]' 
+                : 'bg-[#e6e6e6] text-black border-[#cfcfcf] hover:bg-[#d9d9d9]'
+            }`}
+          >
+            <div className="flex items-center gap-1.5">
+              <GearSix size={12} />
+              <span>Relevant only</span>
+            </div>
+          </button>
+          <button
+            onClick={() => setBuyerCritical(!buyerCritical)}
+            className={`px-2.5 py-1.5 rounded-[8px] border font-mono-ui text-xs transition-colors ${
+              buyerCritical 
+                ? 'bg-[--accent] text-black border-[--accent]' 
+                : 'bg-[#e6e6e6] text-black border-[#cfcfcf] hover:bg-[#d9d9d9]'
+            }`}
+          >
+            <div className="flex items-center gap-1.5">
+              <Star size={12} />
+              <span>Buyer-critical</span>
+            </div>
+          </button>
+          <button
+            onClick={() => setOnlyDifferences(!onlyDifferences)}
+            className={`px-2.5 py-1.5 rounded-[8px] border font-mono-ui text-xs transition-colors ${
+              onlyDifferences 
+                ? 'bg-[--accent] text-black border-[--accent]' 
+                : 'bg-[#e6e6e6] text-black border-[#cfcfcf] hover:bg-[#d9d9d9]'
+            }`}
+          >
+            <div className="flex items-center gap-1.5">
+              <FunnelSimple size={12} />
+              <span>Only differences</span>
+            </div>
+          </button>
           <ExportCSV className="bg-[#e6e6e6] border border-[#cfcfcf] px-2.5 py-1.5" tableData={tableData} />
         </div>
       </div>
@@ -441,10 +843,22 @@ function Results({ runId, domain }: { runId?: string; domain?: string }) {
             <div className="pill-dark text-[#d9d9d9] px-3 py-1 flex items-center gap-2"><GearSix size={14} /><span className="font-mono-ui">SPEC</span></div>
           </div>
           <div className="justify-self-start">
-            <div className="pill-dark text-[#d9d9d9] px-3 py-1 flex items-center gap-2"><DotsThreeOutlineVertical size={14} weight="bold" /><span className="font-mono-ui">{colLabels[1]}</span></div>
+            <div className="pill-dark text-[#d9d9d9] px-3 py-1 flex items-center gap-2">
+              <DotsThreeOutlineVertical size={14} weight="bold" />
+              <div className="flex items-center gap-2">
+                <span className="font-mono-ui">{colLabels[1]}</span>
+                <DomainPill domain={domain || 'CHIP'} deviceName={colLabels[1]} />
+              </div>
+            </div>
           </div>
           <div className="justify-self-start">
-            <div className="pill-dark text-[#d9d9d9] px-3 py-1 flex items-center gap-2"><DotsThreeOutlineVertical size={14} weight="bold" /><span className="font-mono-ui">{colLabels[2]}</span></div>
+            <div className="pill-dark text-[#d9d9d9] px-3 py-1 flex items-center gap-2">
+              <DotsThreeOutlineVertical size={14} weight="bold" />
+              <div className="flex items-center gap-2">
+                <span className="font-mono-ui">{colLabels[2]}</span>
+                <DomainPill domain={domain || 'CHIP'} deviceName={colLabels[2]} />
+              </div>
+            </div>
           </div>
         </div>
 
@@ -454,8 +868,8 @@ function Results({ runId, domain }: { runId?: string; domain?: string }) {
               <div className={`flex items-center font-mono ${r.isCategory ? 'text-white/90 font-medium' : 'text-[#9a9a9a]'}`}>
                 <span>{r.label}</span>
               </div>
-              <div className="text-[#d9d9d9]">{r.a ?? ""}</div>
-              <div className="text-[#d9d9d9]">{r.b ?? ""}</div>
+              <EnhancedCell parsed={r.parsedA!} fieldName={r.label} isCategory={r.isCategory} />
+              <EnhancedCell parsed={r.parsedB!} fieldName={r.label} isCategory={r.isCategory} />
             </div>
           ))}
         </div>

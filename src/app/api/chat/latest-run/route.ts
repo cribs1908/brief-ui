@@ -29,11 +29,11 @@ export async function GET(request: NextRequest) {
         id,
         status,
         created_at,
-        results(id)
+        results_new(id)
       `)
       .eq('workspace_id', workspace.id)
       .eq('status', 'READY')
-      .not('results', 'is', null)
+      .not('results_new', 'is', null)
       .order('created_at', { ascending: false })
       .limit(1)
       .maybeSingle();
