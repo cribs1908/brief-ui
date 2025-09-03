@@ -514,6 +514,9 @@ function getComparisonTitle(domain: string): string {
 function Results({ runId, domain }: { runId?: string; domain?: string }) {
   const [tableData, setTableData] = useState<any>(null);
   const [loading, setLoading] = useState(true);
+  const [onlyDifferences, setOnlyDifferences] = useState(false);
+  const [buyerCritical, setBuyerCritical] = useState(false);
+  const [domainRelevant, setDomainRelevant] = useState(false);
   
   // Fetch real results when component mounts
   useEffect(() => {
@@ -582,6 +585,16 @@ function Results({ runId, domain }: { runId?: string; domain?: string }) {
     });
   }, [tableData]);
 
+  // Etichette colonne dinamiche dai risultati
+  const colLabels = useMemo(() => {
+    const cols = tableData?.table?.columns || [];
+    return [
+      cols[0]?.name || cols[0] || 'Field', 
+      cols[1]?.name || cols[1] || 'DOC 1', 
+      cols[2]?.name || cols[2] || 'DOC 2'
+    ];
+  }, [tableData]);
+
   // Filter rows based on toggles
   const rows = useMemo(() => {
     let filteredRows = allRows;
@@ -637,23 +650,10 @@ function Results({ runId, domain }: { runId?: string; domain?: string }) {
     return filteredRows;
   }, [allRows, onlyDifferences, buyerCritical, domainRelevant, colLabels, domain]);
 
-  // Etichette colonne dinamiche dai risultati
-  const colLabels = useMemo(() => {
-    const cols = tableData?.table?.columns || [];
-    return [
-      cols[0]?.name || cols[0] || 'Field', 
-      cols[1]?.name || cols[1] || 'DOC 1', 
-      cols[2]?.name || cols[2] || 'DOC 2'
-    ];
-  }, [tableData]);
-
   const [miniChatOpen, setMiniChatOpen] = useState(false);
   const [miniMessages, setMiniMessages] = useState<{id:number; role:'user'|'ai'; content:string; thinking?:boolean;}[]>([]);
   const [miniInput, setMiniInput] = useState("");
   const [miniStage, setMiniStage] = useState<'idle'|'thinking'>("idle");
-  const [onlyDifferences, setOnlyDifferences] = useState(false);
-  const [buyerCritical, setBuyerCritical] = useState(false);
-  const [domainRelevant, setDomainRelevant] = useState(false);
   const tableFileInput = useRef<HTMLInputElement|null>(null);
 
   // Load chat history when chat opens
