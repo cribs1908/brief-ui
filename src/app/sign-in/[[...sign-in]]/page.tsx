@@ -36,7 +36,7 @@ export default function Page() {
 						colorTextSecondary: "#9ca3af",
 						colorInputBackground: "#111827",
 						colorInputText: "#ffffff",
-						colorPrimary: "#ffffff",
+						colorPrimary: "#000000",
 						colorDanger: "#ef4444",
 						colorSuccess: "#22c55e"
 					}
