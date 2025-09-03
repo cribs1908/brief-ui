@@ -4,8 +4,8 @@ import LottieBackground from "../../../components/LottieBackground";
 
 export default function Page() {
 	return (
-		<div className="min-h-screen w-full bg-transparent relative flex items-center justify-center p-6">
-			<LottieBackground className="opacity-100" />
+		<div className="min-h-screen w-full bg-[#000000] relative flex items-center justify-center p-6">
+			<LottieBackground className="opacity-20" />
 			<div className="w-full max-w-md relative z-10">
 					<SignIn 
 						routing="path" 
