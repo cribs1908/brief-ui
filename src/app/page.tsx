@@ -566,14 +566,14 @@ function Results({ runId, domain }: { runId?: string; domain?: string }) {
       const parsedValue2 = parseValue(rawValue2);
       
       // Clean up field name - remove "FIELD GROUP:" prefix and improve formatting
-      const cleanLabel = fieldName
+      const cleanLabel = String(fieldName)
         .replace(/^FIELD GROUP:\s*/i, '') // Remove "FIELD GROUP:" prefix
         .replace(/🔹\s*/g, '') // Remove bullet points
         .replace(/_/g, ' ')
         .toUpperCase();
       
       // Check if this is a category separator (starts with 🔹 and no meaningful values)
-      const isCategory = fieldName.includes('🔹') || (!rawValue1 && !rawValue2 && fieldName.includes(':'));
+      const isCategory = String(fieldName).includes('🔹') || (!rawValue1 && !rawValue2 && String(fieldName).includes(':'));
       
       return {
         icon: "pricing", // Default icon, could be made dynamic  
@@ -897,10 +897,11 @@ function ExportCSV({ className = "", tableData }: { className?: string, tableDat
     const dataRows = rows.map((row: string[]) => {
       return row.map((cell: string) => {
         // Handle cells with commas or quotes by wrapping in quotes
-        if (typeof cell === 'string' && (cell.includes(',') || cell.includes('"') || cell.includes('\n'))) {
-          return `"${cell.replace(/"/g, '""')}"`;
+        const cellStr = String(cell || '');
+        if (cellStr.includes(',') || cellStr.includes('"') || cellStr.includes('\n')) {
+          return `"${cellStr.replace(/"/g, '""')}"`;
         }
-        return cell || '';
+        return cellStr;
       }).join(',');
     }).join('\n');
     
@@ -915,7 +916,7 @@ function ExportCSV({ className = "", tableData }: { className?: string, tableDat
     if (columns.length >= 3) {
       // Use product names from columns (skip first column which is usually "Field" or "Specification")
       const productNames = columns.slice(1)
-        .map((name: string) => name.replace(/[^a-zA-Z0-9_-]/g, '_')) // Clean filename
+        .map((name: string) => String(name).replace(/[^a-zA-Z0-9_-]/g, '_')) // Clean filename
         .join('_vs_');
       return `${productNames}_comparison.csv`;
     }

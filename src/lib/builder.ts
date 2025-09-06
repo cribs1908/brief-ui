@@ -112,7 +112,7 @@ export class TableBuilder {
 
 	private extractDocumentName(filename: string): string {
 		// Extract meaningful name from filename
-		let name = filename.replace(/\.(pdf|PDF)$/, '');
+		let name = String(filename).replace(/\.(pdf|PDF)$/, '');
 		
 		// Remove common prefixes/suffixes
 		name = name.replace(/^(spec|datasheet|manual|guide)[-_\s]/i, '');
@@ -191,7 +191,7 @@ export class TableBuilder {
 		}
 		
 		// Convert field ID to display name
-		return fieldId
+		return String(fieldId)
 			.replace(/_/g, ' ')
 			.toUpperCase();
 	}
@@ -485,7 +485,7 @@ export class TableBuilder {
 				const cell = row.values[col.id];
 				if (!cell) return '';
 				
-				let value = cell.value;
+				let value = String(cell.value || '');
 				if (cell.unit) value += ` ${cell.unit}`;
 				
 				// Escape commas and quotes
