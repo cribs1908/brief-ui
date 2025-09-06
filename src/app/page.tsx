@@ -266,12 +266,15 @@ function EnhancedCell({
       
       {/* Red flag indicator */}
       {redFlag.hasFlag && (
-        <Flag 
-          size={14}
-          weight="fill"
+        <span 
           className="text-red-500 cursor-help" 
           title={redFlag.reason}
-        />
+        >
+          <Flag 
+            size={14}
+            weight="fill"
+          />
+        </span>
       )}
       
       {/* Confidence badge */}
