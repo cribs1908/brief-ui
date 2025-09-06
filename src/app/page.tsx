@@ -13,23 +13,24 @@ function parseValue(value: string): {
   confidence: number; 
   hasUnit: boolean 
 } {
-  if (!value || value === '-') {
+  const valueStr = String(value || '');
+  if (!valueStr || valueStr === '-') {
     return { displayValue: '-', unit: '', confidence: 0, hasUnit: false };
   }
   
   // Extract unit patterns (V, mA, µA, °C, dB, dBm, MHz, GHz, Ω, mm, etc.)
-  const unitMatch = value.match(/(\d+\.?\d*)\s*(V|mA|µA|mW|°C|dB|dBm|MHz|GHz|Ω|mm|kV)\b/i);
+  const unitMatch = valueStr.match(/(\d+\.?\d*)\s*(V|mA|µA|mW|°C|dB|dBm|MHz|GHz|Ω|mm|kV)\b/i);
   const hasUnit = !!unitMatch;
   
   // Mock confidence based on value completeness (in real app, this would come from API)
   let confidence = 0.5;
-  if (value.includes('/') || value.includes('-')) confidence += 0.2; // Range values
+  if (valueStr.includes('/') || valueStr.includes('-')) confidence += 0.2; // Range values
   if (hasUnit) confidence += 0.2; // Has proper units
-  if (value.match(/@[\w\s,=]+/)) confidence += 0.1; // Has conditions
+  if (valueStr.match(/@[\w\s,=]+/)) confidence += 0.1; // Has conditions
   confidence = Math.min(confidence, 1.0);
   
   return {
-    displayValue: value,
+    displayValue: valueStr,
     unit: unitMatch ? unitMatch[2] : '',
     confidence,
     hasUnit
@@ -55,9 +56,10 @@ function DomainPill({ domain, deviceName }: { domain: string; deviceName: string
   
   // Detect specific device types
   let detectedDomain = domain;
-  if (deviceName.toLowerCase().includes('trf') || deviceName.toLowerCase().includes('rf')) {
+  const deviceStr = String(deviceName || '').toLowerCase();
+  if (deviceStr.includes('trf') || deviceStr.includes('rf')) {
     detectedDomain = 'RF';
-  } else if (deviceName.toLowerCase().includes('pga') || deviceName.toLowerCase().includes('amplifier')) {
+  } else if (deviceStr.includes('pga') || deviceStr.includes('amplifier')) {
     detectedDomain = 'PGA';
   }
   
@@ -103,7 +105,7 @@ function isBuyerCriticalField(fieldName: string): boolean {
     'automotive qualified', 'certifications'
   ];
   
-  const normalizedField = fieldName.toLowerCase();
+  const normalizedField = String(fieldName || '').toLowerCase();
   return criticalFields.some(critical => 
     normalizedField.includes(critical) || critical.includes(normalizedField)
   );
@@ -111,8 +113,8 @@ function isBuyerCriticalField(fieldName: string): boolean {
 
 // Determine if field is relevant for domain
 function isFieldRelevantForDomain(fieldName: string, domain: string, deviceName: string): boolean {
-  const lowerField = fieldName.toLowerCase();
-  const lowerDevice = deviceName.toLowerCase();
+  const lowerField = String(fieldName || '').toLowerCase();
+  const lowerDevice = String(deviceName || '').toLowerCase();
   
   // Always show core identification fields
   const coreFields = [
@@ -186,10 +188,12 @@ function isFieldRelevantForDomain(fieldName: string, domain: string, deviceName:
 
 // Detect red flags in values
 function detectRedFlags(fieldName: string, value: string): { hasFlag: boolean; reason: string } {
-  if (!value || value === '-') return { hasFlag: false, reason: '' };
+  const valueStr = String(value || '');
+  const fieldStr = String(fieldName || '');
+  if (!valueStr || valueStr === '-') return { hasFlag: false, reason: '' };
   
-  const lowerValue = value.toLowerCase();
-  const lowerField = fieldName.toLowerCase();
+  const lowerValue = valueStr.toLowerCase();
+  const lowerField = fieldStr.toLowerCase();
   
   // Missing critical data
   if (lowerValue.includes('n/a') || lowerValue.includes('not available') || 
@@ -300,7 +304,7 @@ function EnhancedCell({
 
 // Detect domain based on prompt and file names
 function detectDomain(prompt: string, files: File[]): string {
-  const text = `${prompt} ${files.map(f => f.name).join(' ')}`.toLowerCase();
+  const text = `${String(prompt || '')} ${files.map(f => String(f.name || '')).join(' ')}`.toLowerCase();
   
   if (text.includes('chip') || text.includes('microcontroller') || text.includes('processor') || 
       text.includes('voltage') || text.includes('current') || text.includes('frequency') ||
@@ -442,7 +446,7 @@ function ChatCard({ onSubmit, stage, setStage, onDone }: { onSubmit: (prompt: st
             {/* Attach */}
             <label className="btn-icon h-10 w-10 rounded-full flex items-center justify-center cursor-pointer">
               <input type="file" className="hidden" multiple accept="application/pdf,.pdf" onChange={(e)=>{
-                const selected = Array.from(e.target.files || []).filter(f => /pdf$/i.test(f.type) || f.name.toLowerCase().endsWith('.pdf'));
+                const selected = Array.from(e.target.files || []).filter(f => /pdf$/i.test(f.type) || String(f.name || '').toLowerCase().endsWith('.pdf'));
                 if (selected.length) setFiles(prev=>[...prev, ...selected].slice(0,5));
               }} />
               <Paperclip size={24} weight="regular" color="#5F5F5F" />
@@ -501,7 +505,7 @@ type Row = {
 function getComparisonTitle(domain: string): string {
   if (!domain) return "Comparison";
   
-  const domainUpper = domain.toUpperCase();
+  const domainUpper = String(domain || '').toUpperCase();
   switch (domainUpper) {
     case 'CHIP':
       return "CHIP Comparison";
