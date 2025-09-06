@@ -1,7 +1,7 @@
 "use client";
 import { useMemo, useState, useEffect, useRef } from "react";
 import Image from "next/image";
-import { Paperclip, Star, ArrowUp, ChatText, FileText, MagnifyingGlass, GearSix, DotsThreeOutlineVertical, DownloadSimple, Sparkle, Asterisk, FunnelSimple, ChatsCircle, CaretDown, FilePdf, X, ArrowRight, Archive, User, Buildings, Palette, Bell, CreditCard, TrashSimple, Moon, SunDim, Shield, LockSimple } from "@phosphor-icons/react";
+import { Paperclip, Star, ArrowUp, ChatText, FileText, MagnifyingGlass, GearSix, DotsThreeOutlineVertical, DownloadSimple, Sparkle, Asterisk, FunnelSimple, ChatsCircle, CaretDown, FilePdf, X, ArrowRight, Archive, User, Buildings, Palette, Bell, CreditCard, TrashSimple, Moon, SunDim, Shield, LockSimple, Flag } from "@phosphor-icons/react";
 import { apiCreateRun, uploadSigned, apiSubmit, listenEvents, apiResult, apiChatQnA, apiChatHistory, apiGetComparisons, apiSaveComparison, apiRenameComparison, apiDeleteComparison } from "@/lib/client";
 import { UserButton, SignInButton, SignUpButton, SignedIn, SignedOut } from "@clerk/nextjs";
 import FilesList from "@/components/FilesList";
@@ -266,12 +266,12 @@ function EnhancedCell({
       
       {/* Red flag indicator */}
       {redFlag.hasFlag && (
-        <span 
-          className="text-red-500 text-xs cursor-help" 
+        <Flag 
+          size={14}
+          weight="fill"
+          className="text-red-500 cursor-help" 
           title={redFlag.reason}
-        >
-          🚩
-        </span>
+        />
       )}
       
       {/* Confidence badge */}
@@ -729,42 +729,29 @@ function Results({ runId, domain }: { runId?: string; domain?: string }) {
         </div>
         <div className="ml-auto flex items-center gap-2">
           <button
-            onClick={() => setDomainRelevant(!domainRelevant)}
-            className={`px-2.5 py-1.5 rounded-[8px] border font-mono-ui text-xs transition-colors ${
-              domainRelevant 
-                ? 'bg-[--accent] text-black border-[--accent]' 
-                : 'bg-[#e6e6e6] text-black border-[#cfcfcf] hover:bg-[#d9d9d9]'
-            }`}
-          >
-            <div className="flex items-center gap-1.5">
-              <GearSix size={12} />
-              <span>Relevant only</span>
-            </div>
-          </button>
-          <button
             onClick={() => setBuyerCritical(!buyerCritical)}
-            className={`px-2.5 py-1.5 rounded-[8px] border font-mono-ui text-xs transition-colors ${
+            className={`px-2.5 py-1.5 rounded-[8px] border font-mono-ui text-xs transition-all duration-300 transform ${
               buyerCritical 
-                ? 'bg-[--accent] text-black border-[--accent]' 
-                : 'bg-[#e6e6e6] text-black border-[#cfcfcf] hover:bg-[#d9d9d9]'
+                ? 'bg-gradient-to-r from-blue-500 to-purple-600 text-white border-blue-500 shadow-lg scale-105' 
+                : 'bg-[#e6e6e6] text-gray-700 border-[#cfcfcf] hover:bg-[#d9d9d9] hover:scale-102'
             }`}
           >
             <div className="flex items-center gap-1.5">
-              <Star size={12} />
-              <span>Buyer-critical</span>
+              <Star size={12} weight={buyerCritical ? 'fill' : 'regular'} />
+              <span className="font-medium">Buyer-critical</span>
             </div>
           </button>
           <button
             onClick={() => setOnlyDifferences(!onlyDifferences)}
-            className={`px-2.5 py-1.5 rounded-[8px] border font-mono-ui text-xs transition-colors ${
+            className={`px-2.5 py-1.5 rounded-[8px] border font-mono-ui text-xs transition-all duration-300 transform ${
               onlyDifferences 
-                ? 'bg-[--accent] text-black border-[--accent]' 
-                : 'bg-[#e6e6e6] text-black border-[#cfcfcf] hover:bg-[#d9d9d9]'
+                ? 'bg-gradient-to-r from-emerald-500 to-teal-600 text-white border-emerald-500 shadow-lg scale-105' 
+                : 'bg-[#e6e6e6] text-gray-700 border-[#cfcfcf] hover:bg-[#d9d9d9] hover:scale-102'
             }`}
           >
             <div className="flex items-center gap-1.5">
-              <FunnelSimple size={12} />
-              <span>Only differences</span>
+              <FunnelSimple size={12} weight={onlyDifferences ? 'fill' : 'regular'} />
+              <span className="font-medium">Only differences</span>
             </div>
           </button>
           <ExportCSV className="bg-[#e6e6e6] border border-[#cfcfcf] px-2.5 py-1.5" tableData={tableData} />
